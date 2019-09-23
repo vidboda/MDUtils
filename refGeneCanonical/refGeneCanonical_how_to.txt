@@ -1,0 +1,11 @@
+You can select these refGene specific rows relating back to knownCanonical from our Table Browser: http://genome.ucsc.edu/cgi-bin/hgTables
+
+1. Select hg38, and group "Genes..." and track "GENCODE v22" 
+2. Change table from "knownGene" to "knownCanonical" 
+3. Change "output format" to "selected fields from primary and related tables".
+4. Click "get output" 
+5. Scroll down to the "Linked Tables" section and click the box next to "hg38 refGene". 
+6. Click the "allow selection from checked tables" 
+7. Below "hg38.refGene fields" you can click "name" and "name2" and from knownCanonical "transcript" and then "get output".
+
+=> results in a file with a single refseqid for each gene
