@@ -57,7 +57,7 @@ def main():
 	print(lacking_nm)
 	print("Genes modified {}".format(i))			
 	
-	#db.commit()
+	db.commit()
 	
 	
 		
