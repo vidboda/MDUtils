@@ -5,7 +5,6 @@ import argparse
 import psycopg2
 import psycopg2.extras
 from insert_genes import get_db
-import psycopg2.extras
 #requires MobiDetails config module + database.ini file
 from MobiDetailsApp import config
 
