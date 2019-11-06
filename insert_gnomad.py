@@ -28,7 +28,8 @@ def main():
 		geneLineList = geneLine.split("\t")
 		#print(geneLineList[0])
 		curs.execute(#exists in MD?
-			"SELECT name FROM gene WHERE name[1] = '{0}' AND number_of_exons IN (SELECT MAX(number_of_exons) FROM gene WHERE name[1] = '{0}')".format(geneLineList[0])
+			"SELECT name FROM gene WHERE name[1] = '{0}' AND canonical = 't'".format(geneLineList[0])
+			#number_of_exons IN (SELECT MAX(number_of_exons) FROM gene WHERE name[1] = '{0}')".format(geneLineList[0])
 		)
 		mdNMFirst = curs.fetchone()
 		if mdNMFirst is not None:
