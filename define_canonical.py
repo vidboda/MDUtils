@@ -13,7 +13,7 @@ from MobiDetailsApp import config
 #fixed with the refGenecanonical file
 
 def main():
-	parser = argparse.ArgumentParser(description='Define a canonical transcript per gene', usage='python define_canonical.py [-d path/to/refGeneCanonical_2019_09_23.txt]')
+	parser = argparse.ArgumentParser(description='Define a canonical transcript per gene', usage='python define_canonical.py [-r path/to/refGeneCanonical_2019_09_23.txt]')
 	parser.add_argument('-r', '--refgene', default='', required=True, help='Path to the file containing the canonical refSeq IDs per gene')
 	args = parser.parse_args()
 	#get file 

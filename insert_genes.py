@@ -41,26 +41,37 @@ def main():
 	else:
 		sys.exit('Invalid input path, please check your command')
 	sqlFiles = get_file_list(sqlPath)
-	#print(sqlFiles)
-	
 	#get db connector and cursor
 	db = get_db()
 	curs = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
+	
 	i = 0
 	for sqlFile in sorted(sqlFiles):
-		i += 1
-		for line in open(os.path.join(sqlPath, sqlFile)).readlines():
-			if re.match('INSERT INTO (gene|segment|protein_domain)', line):
-				try:
-					line = re.sub(",'',", ",NULL,", line)
-					line = re.sub(",'NULL',", ",NULL,", line)
-					curs.execute(line)
-				except psycopg2.Error as e:
-					print(sqlFile + "\n" + line + "\n" + e)
-			else:
-				print('non matching line ' + line + 'in file ' + sqlFile)
-		
-		print(sqlFile + ' inserted - #' + str(i))
+		#gene/isoform already exists?		
+		if re.search(r'[\w\d]+_NM_\d+_SQL.sql', sqlFile):
+			match_object = re.search(r'([\w\d]+)_(NM_\d+)_SQL.sql', sqlFile)
+			gene = match_object.group(1)
+			isoform = match_object.group(2)
+			curs.execute(
+				"SELECT name[1], name[2] FROM gene WHERE name[1] = '{0}' AND name[2] = '{1}'".format(gene, isoform)	
+			)
+			res = curs.fetchone()
+			if res is None:
+				i += 1
+				for line in open(os.path.join(sqlPath, sqlFile)).readlines():
+					if re.match('INSERT INTO (gene|segment|protein_domain)', line):
+						try:
+							line = re.sub(",'',", ",NULL,", line)
+							line = re.sub(",'NULL',", ",NULL,", line)
+							curs.execute(line)
+						except psycopg2.Error as e:
+							print(sqlFile + "\n" + line + "\n" + e)
+					else:
+						print('non matching line ' + line + 'in file ' + sqlFile)
+				
+				print(sqlFile + ' inserted - #' + str(i))
+		else:
+			print('Bad regexp for {}'.format(sqlFile))
 		
 	db.commit()
 	
