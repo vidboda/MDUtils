@@ -14,8 +14,8 @@ def main():
 	#to be ran after uta docker update for example
 	#uses VV API genes2transcript
 	#https://rest.variantvalidator.org:443/tools/gene2transcripts/{gene_name}
-	#vv_url_base = "https://rest.variantvalidator.org:443"
-	vv_url_base = "http://0.0.0.0:8000/"
+	vv_url_base = "https://rest.variantvalidator.org:443"
+	#vv_url_base = "http://0.0.0.0:8000/"
 	
 	db = get_db()
 	curs = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
