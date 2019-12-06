@@ -1,4 +1,5 @@
 import os
+import re
 import argparse
 import urllib3
 import certifi
@@ -27,17 +28,20 @@ def main():
 	http = urllib3.PoolManager(cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())
 	for variant in open(batchFile).readlines():
 		variant = variant.rstrip()
-		md_url = '{0}/api/variant/create/{1}'.format(md_base_url, variant)
-		print('Submitting variant {0} to MobiDetails: {1}'.format(variant, md_url))
-		
-		#try:
-		md_response = json.loads(http.request('GET', md_url).data.decode('utf-8'))
-		#except:
-		#	print('Call failed')
-		#	continue
-			
-		print(md_response)
-		print()
+		variant = variant.replace(' ', '')
+		if variant != '':
+			if re.search('NM_\d+\.\d:c\..+', variant):
+				md_url = '{0}/api/variant/create/{1}'.format(md_base_url, variant)
+				print('Submitting variant {0} to MobiDetails: {1}'.format(variant, md_url))
+				
+				#try:
+				md_response = json.loads(http.request('GET', md_url).data.decode('utf-8'))
+				#except:
+				#	print('Call failed')
+				#	continue
+					
+				print(md_response)
+				print()
 
 if __name__ == '__main__':
 	main()
