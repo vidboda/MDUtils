@@ -9,7 +9,7 @@ import psycopg2.extras
 #requires MobiDetails config module + database.ini file
 from MobiDetailsApp import config
 
-#first genes in databse did not have cnaonical transcripts.
+#first genes in database did not have canonical transcripts.
 #fixed with the refGenecanonical file
 
 def main():
@@ -71,7 +71,7 @@ def main():
 				else:
 					lacking_nm.append(geneLineList[2])
 	print(lacking_nm)
-	print("Genes modified {}".format(i))			
+	print("{} genes modified".format(i))			
 	
 	db.commit()
 	
