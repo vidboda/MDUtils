@@ -1,5 +1,3 @@
-import sys
-import os
 import re
 import argparse
 import psycopg2
@@ -46,10 +44,14 @@ def main():
 		for keys in api_response:
 			if 'canonical' in api_response[keys]:
 				if api_response[keys]['canonical'] is True:
-					curs.execute(
-						"UPDATE gene set canonical = 't' WHERE name[2] = '{}'".format(keys)
-					)
-					i += 1
+					if re.search(r'NM_\d+\.\d', keys):
+						match_obj = re.search(r'(NM_\d+)\.\d', keys)
+						nm_acc = match_obj.group(1)
+						curs.execute(
+							"UPDATE gene set canonical = 't' WHERE name[2] = '{}'".format(nm_acc)
+						)
+						print("Updating {}".format(nm_acc))
+						i += 1
 	db.commit()
 	print("{} genes modified".format(i))		
 	
