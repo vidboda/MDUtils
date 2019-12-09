@@ -25,8 +25,24 @@ def main():
 	#get db connector and cursor
 	db = get_db()
 	curs = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
+	
 	i = 0
 	lacking_nm = []
+	
+	#first when only one isoform => canonical
+	
+	curs.execute(
+		"select name from gene where canonical = 'f' and name[1] in (select name[1] from gene group by name[1] having count(name[1]) = 1)"
+	)
+	res = curs.fetchall();
+	for acc in res:
+		curs.execute(
+			"UPDATE gene SET canonical = 't' WHERE name[2] = '{}'".format(acc['name'][1])
+		)
+		lacking_nm.append(acc['name'][0])
+		i += 1
+	
+	#second check the refgene file
 
 	for geneLine in open(refgeneFile).readlines():
 		#ENST - NM - gene
