@@ -31,7 +31,7 @@ def main():
 	curs = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
 	#get local list of genes with no canonical isoform defined
 	curs.execute(
-		"SELECT DISTINCT(name[1]) as hgnc FROM gene WHERE name[1] NOT IN (SELECT name[1] FROM gene WHERE canonical='t') ORDER BY name[1];"
+		"SELECT DISTINCT(name[1]) as hgnc FROM gene WHERE name[1] NOT IN (SELECT name[1] FROM gene WHERE canonical='t') ORDER BY name[1]"
 	)
 	no_can = curs.fetchall()
 	
