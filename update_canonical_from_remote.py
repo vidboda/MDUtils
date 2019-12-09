@@ -45,11 +45,11 @@ def main():
 		api_response = json.loads(http.request('GET', req_url).data.decode('utf-8'))
 		for keys in api_response:
 			if 'canonical' in api_response[keys]:
-				print(api_response[keys]['canonical'])
-				if api_response[keys]['canonical'] == True:
+				if api_response[keys]['canonical'] is True:
 					curs.execute(
 						"UPDATE gene set canonical = 't' WHERE name[2] = '{}'".format(keys)
 					)
+					i += 1
 	db.commit()
 	print("{} genes modified".format(i))		
 	
