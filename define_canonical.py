@@ -53,31 +53,31 @@ def main():
 	
 	#second check the refgene file
 
-	# for geneLine in open(refgeneFile).readlines():
-	# 	#ENST - NM - gene
-	# 	geneLineList = geneLine.rstrip().split("\t")
-	# 	#print(geneLineList[2])
-	# 	if geneLineList[2] != 'n/a' and geneLineList[2] != 'hg38.refGene.name2':
-	# 		curs.execute(#gene exists in MD (no main already set)
-	# 			"SELECT DISTINCT(name[1]) FROM gene WHERE name[1] = '{}' AND name[1] NOT IN (SELECT name[1] FROM gene WHERE canonical = 't');".format(geneLineList[2])
-	# 		)
-	# 		mdgene = curs.fetchone()
-	# 		
-	# 		if mdgene is not None:
-	# 			#nm exists in md?
-	# 			curs.execute(
-	# 				"SELECT name FROM gene WHERE name[2] = '{0}'".format(geneLineList[1])
-	# 			)#exists in table gene_annotation? get a nm
-	# 			mdnm = curs.fetchone()
-	# 			if mdnm is not None:
-	# 				#ok => canonical
-	# 				i += 1
-	# 				postGene = '{"' + mdnm['name'][0] + '","' + mdnm['name'][1] + '"}'
-	# 				#print("UPDATE gene SET canonical = 't' WHERE name = '{}'".format(postGene))
-	# 				curs.execute(
-	# 				 	"UPDATE gene SET canonical = 't' WHERE name = '{}'".format(postGene)
-	# 				)
-	# 				print('Updated gene {} (2nd method)'.format(mdnm['name'][0]))
+	for geneLine in open(refgeneFile).readlines():
+		#ENST - NM - gene
+		geneLineList = geneLine.rstrip().split("\t")
+		#print(geneLineList[2])
+		if geneLineList[2] != 'n/a' and geneLineList[2] != 'hg38.refGene.name2':
+			curs.execute(#gene exists in MD (no main already set)
+				"SELECT DISTINCT(name[1]) FROM gene WHERE name[1] = '{}' AND name[1] NOT IN (SELECT name[1] FROM gene WHERE canonical = 't');".format(geneLineList[2])
+			)
+			mdgene = curs.fetchone()
+			
+			if mdgene is not None:
+				#nm exists in md?
+				curs.execute(
+					"SELECT name FROM gene WHERE name[2] = '{0}'".format(geneLineList[1])
+				)#exists in table gene_annotation? get a nm
+				mdnm = curs.fetchone()
+				if mdnm is not None:
+					#ok => canonical
+					i += 1
+					postGene = '{"' + mdnm['name'][0] + '","' + mdnm['name'][1] + '"}'
+					#print("UPDATE gene SET canonical = 't' WHERE name = '{}'".format(postGene))
+					curs.execute(
+					 	"UPDATE gene SET canonical = 't' WHERE name = '{}'".format(postGene)
+					)
+					print('Updated gene {} (2nd method)'.format(mdnm['name'][0]))
 				#else:
 					#lacking_nm.append(geneLineList[2])
 	#print(lacking_nm)
