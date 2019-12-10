@@ -59,7 +59,7 @@ def main():
 		#print(geneLineList[2])
 		if geneLineList[2] != 'n/a' and geneLineList[2] != 'hg38.refGene.name2':
 			curs.execute(#gene exists in MD (no main already set)
-				"SELECT DISTINCT(name[1]) FROM gene WHERE name[1] = '{}' AND name[1] NOT IN (SELECT name[1] FROM gene WHERE canonical = 't');".format(geneLineList[2])
+				"SELECT DISTINCT(name[1]) FROM gene WHERE name[1] = '{}' AND name[1] NOT IN (SELECT name[1] FROM gene WHERE canonical = 't')".format(geneLineList[2])
 			)
 			mdgene = curs.fetchone()
 			
@@ -88,7 +88,7 @@ def main():
 		http = urllib3.PoolManager(cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())
 		#get list of remaining genes with no canonical defined
 		curs.execute(
-			"SELECT name, np FROM gene WHERE name[1] NOT IN (SELECT name[1] FROM gene WHERE canonical='t') "
+			"SELECT name, np FROM gene WHERE name[1] NOT IN (SELECT name[1] FROM gene WHERE canonical='t')"
 		)
 		res = curs.fetchall();
 		for acc in res:
