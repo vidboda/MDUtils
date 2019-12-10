@@ -21,7 +21,7 @@ def main():
 	curs = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
 	
 	curs.execute(#get genes
-		"SELECT name, nm_version FROM gene"
+		"SELECT name, nm_version FROM gene ORDER BY name"
 	)
 	genes = curs.fetchall()
 	i = 0
