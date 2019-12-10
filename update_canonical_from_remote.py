@@ -17,10 +17,11 @@ from MobiDetailsApp import config
 def main():
 	parser = argparse.ArgumentParser(description='Define a canonical transcript per gene', usage='python define_canonical.py [-r remote_server_url]')
 	parser.add_argument('-r', '--remote-server', default='', required=True, help='base URL of the remote server')
+	parser.add_argument('-np', '--update-np', default='', required=False, help='Optionally update NP for genes', action='store_true')
+	
 	args = parser.parse_args()
-	
 	remote_addr = args.remote_server
-	
+#	args = parser.parse_args(['-np'])
 	print()
 	print('Working with server {}'.format(remote_addr))
 	
@@ -53,7 +54,29 @@ def main():
 						print("Updating {}".format(nm_acc))
 						i += 1
 	db.commit()
-	print("{} genes modified".format(i))		
+	print("{} genes modified".format(i))
 	
+	if args.update_np:
+		curs.execute(
+			"SELECT DISTINCT(name[1]) as hgnc FROM gene WHERE np = 'NP_000000.0'"
+		)
+		no_np = curs.fetchall()
+		j = 0
+		for gene in no_np:
+			req_url = '{0}/api/gene/{1}'.format(remote_addr, gene['hgnc'])
+			api_response = json.loads(http.request('GET', req_url).data.decode('utf-8'))
+			for keys in api_response:
+				if 'RefProtein' in api_response[keys] and api_response[keys]['RefProtein'] != 'NP_000000.0':
+					if re.search(r'NP_\d+\.\d', api_response[keys]['RefProtein']):
+						match_obj = re.search(r'(NM_\d+)\.\d', keys)
+						nm_acc = match_obj.group(1)
+						np_acc = api_response[keys]['RefProtein']
+						curs.execute(
+							"UPDATE gene set np = '{0}' WHERE name[2] = '{1}'".format(np_acc, nm_acc)
+						)
+						print("Updating gene NP acc no of {0} to {1}".format(nm_acc, np_acc))
+						i += 1
+		db.commit()
+
 if __name__ == '__main__':
 	main()
