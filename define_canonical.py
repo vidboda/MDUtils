@@ -50,7 +50,7 @@ def main():
 		#lacking_nm.append(acc['name'][0])
 		print('Updated gene {} (1st method)'.format(acc['name'][0]))
 		i += 1
-	
+	db.commit()
 	#second check the refgene file
 
 	for geneLine in open(refgeneFile).readlines():
@@ -81,7 +81,7 @@ def main():
 				#else:
 					#lacking_nm.append(geneLineList[2])
 	#print(lacking_nm)
-	
+	db.commit()
 	#3rd get info at NCBI
 	#API key mandatory
 	if ncbi_api_key is not None:
