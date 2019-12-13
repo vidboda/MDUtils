@@ -75,8 +75,9 @@ def main():
 							"UPDATE gene set np = '{0}' WHERE name[2] = '{1}'".format(np_acc, nm_acc)
 						)
 						print("Updating gene NP acc no of {0} to {1}".format(nm_acc, np_acc))
-						i += 1
+						j += 1
 		db.commit()
+		print("{} NP acc no modified".format(j))
 
 if __name__ == '__main__':
 	main()
