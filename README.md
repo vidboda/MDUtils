@@ -28,7 +28,7 @@ Done!
 ### In a virtual environment
 
 
-```h
+```bash
 
 git clone https://github.com/beboche/MDUtils.git
 cd MDUtils
