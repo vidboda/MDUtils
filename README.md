@@ -9,26 +9,26 @@ requires python 3
 
 ### In regular environment
 
-'''bash
+```bash
 
 git clone https://github.com/beboche/MDUtils.git
 
-'''
+```
 
 then
 
-'''bash
+```bash
 
 cd MDUtils
 pip install -r requirements.txt
 
-'''
+```
 Done!
 
 ### In a virtual environment
 
 
-'''bash
+```h
 
 git clone https://github.com/beboche/MDUtils.git
 cd MDUtils
