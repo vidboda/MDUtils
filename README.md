@@ -2,34 +2,40 @@
 Utilities for MobiDetails
 
 
-##Installation
+## Installation
 
 
 requires python 3
 
-###In regular environnent
+### In regular environment
 
-'''
+'''bash
+
 git clone https://github.com/beboche/MDUtils.git
+
 '''
 
 then
 
-'''
+'''bash
+
 cd MDUtils
 pip install -r requirements.txt
+
 '''
 Done!
 
-###In a virtual environment
+### In a virtual environment
 
 
-'''
+'''bash
+
 git clone https://github.com/beboche/MDUtils.git
 cd MDUtils
 python3 -m venv venv
 . venv/bin/activate
 pip install -r requirements.txt
+
 '''
 
 Done!
