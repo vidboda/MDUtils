@@ -1,5 +1,6 @@
 # MDUtils
-Utilities for MobiDetails
+
+Utilities for MobiDetails. It is essentially python scripts for MobiDetails administrators. However, one script is designed for the end-user (create_vars_batch.py). See the [wiki](https://github.com/beboche/MDUtils/wiki) for details.
 
 
 ## Installation
