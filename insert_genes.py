@@ -47,9 +47,11 @@ def main():
 	
 	i = 0
 	for sqlFile in sorted(sqlFiles):
-		#gene/isoform already exists?		
-		if re.search(r'[\w\d]+_NM_\d+_SQL.sql', sqlFile):
-			match_object = re.search(r'([\w\d]+)_(NM_\d+)_SQL.sql', sqlFile)
+		#gene/isoform already exists?
+		match_object = re.search(r'([\w\d-]+)_(NM_\d+)_SQL.sql', sqlFile)
+		if match_object is not None:
+		#if re.search(r'[\w\d-]+_NM_\d+_SQL.sql', sqlFile):
+			#match_object = re.search(r'([\w\d-]+)_(NM_\d+)_SQL.sql', sqlFile)
 			gene = match_object.group(1)
 			isoform = match_object.group(2)
 			curs.execute(
