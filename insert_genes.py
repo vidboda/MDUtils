@@ -50,6 +50,7 @@ def main():
 		#gene/isoform already exists?
 		match_object = re.search(r'([\w\d-]+)_(NM_\d+)_SQL.sql', sqlFile)
 		if match_object is not None:
+			print(sqlFile)
 		#if re.search(r'[\w\d-]+_NM_\d+_SQL.sql', sqlFile):
 			#match_object = re.search(r'([\w\d-]+)_(NM_\d+)_SQL.sql', sqlFile)
 			gene = match_object.group(1)
@@ -67,11 +68,11 @@ def main():
 							line = re.sub(",'NULL',", ",NULL,", line)
 							curs.execute(line)
 						except psycopg2.Error as e:
-							print(sqlFile + "\n" + line + "\n" + e)
+							print("{0} - {1} - {2}".format(sqlFile, line, e))
 					else:
-						print('non matching line ' + line + 'in file ' + sqlFile)
+						print('non matching line {0} in file {1}'.format(line, sqlFile))
 				
-				print(sqlFile + ' inserted - #' + str(i))
+				print('{0} inserted - #{1}'.format(sqlFile, str(i)))
 		else:
 			print('Bad regexp for {}'.format(sqlFile))
 		
