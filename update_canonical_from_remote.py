@@ -6,18 +6,19 @@ import urllib3
 import certifi
 import json
 from insert_genes import get_db
-import psycopg2.extras
 #requires MobiDetails config module + database.ini file
 from MobiDetailsApp import config
 
 #fix genes in database did not have canonical transcripts.
 #fix from remote MD server which has the information (typically dev server), using the API
+#fix UNIPORT IDs, using the MDAPI and Uniprot API
 
 
 def main():
 	parser = argparse.ArgumentParser(description='Define a canonical transcript per gene', usage='python define_canonical.py [-r remote_server_url]')
 	parser.add_argument('-r', '--remote-server', default='', required=True, help='base URL of the remote server')
 	parser.add_argument('-np', '--update-np', default='', required=False, help='Optionally update NP for genes', action='store_true')
+	parser.add_argument('-uu', '--update-uniprot', default='', required=False, help='Optionally update UNIPROT IDs', action='store_true')
 	
 	args = parser.parse_args()
 	remote_addr = args.remote_server
@@ -78,6 +79,33 @@ def main():
 						j += 1
 		db.commit()
 		print("{} NP acc no modified".format(j))
-
+	if args.update_uniprot:
+		curs.execute(
+			"SELECT  name[1] as HGNC, name[2] as nm, np, uniprot_id FROM gene ORDER BY name"
+		)
+		res = curs.fetchall()
+		k = 0
+		l = 0
+		for gene in res:
+			req_url = '{0}/api/gene/{1}'.format(remote_addr, gene['hgnc'])
+			api_response = json.loads(http.request('GET', req_url).data.decode('utf-8'))
+			l += 1
+			if l % 1000 == 0:
+				print('{0}/{1} isoforms checked)'.format(l, curs.rowcount))
+			for keys in api_response:
+				if 'UNIPROT' in api_response[keys]:
+					match_obj = re.search(r'(NM_\d+)\.\d', keys)
+					if match_obj:
+						nm_acc = match_obj.group(1)
+						uniprot = api_response[keys]['UNIPROT']
+						if nm_acc == gene['nm']:
+							if uniprot != gene['uniprot_id']:
+								curs.execute(
+									"UPDATE gene set uniprot_id = '{0}' WHERE name[2] = '{1}'".format(uniprot, nm_acc)
+								)
+								print("Updating gene UNIPROT id of {0} to {1}".format(nm_acc, uniprot))
+								k += 1
+		db.commit()
+		print("{} UNIPROT ids modified".format(k))
 if __name__ == '__main__':
 	main()

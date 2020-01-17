@@ -15,8 +15,8 @@ from MobiDetailsApp import config
 #update genes for which np acc no is NP_000000.0
 
 def main():
-	parser = argparse.ArgumentParser(description='Define a canonical transcript per gene', usage='python define_canonical.py [-r path/to/refGeneCanonical_2019_09_23.txt]')
-	parser.add_argument('-k', '--ncbi-api-key', default=None, required=True, help='NCBI Entrez API key. If not provided, 3rd method is not executed')
+	parser = argparse.ArgumentParser(description='Defines NP RefSeq acc_no when lacking', usage='python update_np_acc_no.py -k ncbi_api_key')
+	parser.add_argument('-k', '--ncbi-api-key', default=None, required=True, help='NCBI Entrez API key.')
 	args = parser.parse_args()
 	#get file
 	

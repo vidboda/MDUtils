@@ -50,7 +50,6 @@ def main():
 		#gene/isoform already exists?
 		match_object = re.search(r'([\w\d-]+)_(NM_\d+)_SQL.sql', sqlFile)
 		if match_object is not None:
-			print(sqlFile)
 		#if re.search(r'[\w\d-]+_NM_\d+_SQL.sql', sqlFile):
 			#match_object = re.search(r'([\w\d-]+)_(NM_\d+)_SQL.sql', sqlFile)
 			gene = match_object.group(1)
