@@ -29,7 +29,7 @@ def get_file_list(sqlPath):
 	if sqlFiles:
 		return(sqlFiles)
 	else:
-		sys.exit('No SQL files in path {}'.format(sqlPath))
+		sys.exit('ERROR: No SQL files in path {}'.format(sqlPath))
 
 def main():
 	parser = argparse.ArgumentParser(description='Insert MD SQL gene files', usage='python insert_genes.py [-d path/to/dir/containing/md/sql/genes/files/]')
@@ -39,7 +39,7 @@ def main():
 	if os.path.isdir(args.directory):
 		sqlPath = args.directory
 	else:
-		sys.exit('Invalid input path, please check your command')
+		sys.exit('ERROR: Invalid input path, please check your command')
 	sqlFiles = get_file_list(sqlPath)
 	#get db connector and cursor
 	db = get_db()
@@ -69,11 +69,11 @@ def main():
 						except psycopg2.Error as e:
 							print("{0} - {1} - {2}".format(sqlFile, line, e))
 					else:
-						print('non matching line {0} in file {1}'.format(line, sqlFile))
+						print('ERROR: non matching line {0} in file {1}'.format(line, sqlFile))
 				
-				print('{0} inserted - #{1}'.format(sqlFile, str(i)))
+				print('INFO: {0} inserted - #{1}'.format(sqlFile, str(i)))
 		else:
-			print('Bad regexp for {}'.format(sqlFile))
+			print('ERROR: Bad regexp for {}'.format(sqlFile))
 		
 	db.commit()
 	

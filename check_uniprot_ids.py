@@ -44,13 +44,13 @@ def main():
 						"UPDATE gene SET uniprot_id = '{0}' WHERE name[2] = '{1}'".format(uniprot_response[0]['accession'], gene['name'][1])
 					)
 					#print("UPDATE gene SET uniprot_id = '{0}' WHERE name[2] = '{1}'".format(uniprot_response[0]['accession'], gene['name'][1]))
-					print('WARNING Updated gene UNIPROT ID of {0} - {1} from {2} to {3}'.format(gene['name'][0], gene['name'][1], gene['uniprot_id'], uniprot_response[0]['accession']))
+					print('WARNING: Updated gene UNIPROT ID of {0} - {1} from {2} to {3}'.format(gene['name'][0], gene['name'][1], gene['uniprot_id'], uniprot_response[0]['accession']))
 					i += 1
 			else:
 				print('WARNING: md_uniprot_id: {0} - RefSeq: {1} - {2} - {3} :not checked'.format(gene['uniprot_id'], gene['np'], gene['name'][1], gene['name'][0]))
 		except:
 			print('ERROR: no UNIPROT ID {0} for {1} - {2}'.format(uniprot_response, gene['name'][1], gene['name'][0]))
-	print("{} isoforms updated".format(i))
+	print("INFO: {} isoforms updated".format(i))
 	
 	db.commit()
 	

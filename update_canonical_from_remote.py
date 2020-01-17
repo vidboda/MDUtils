@@ -24,7 +24,7 @@ def main():
 	remote_addr = args.remote_server
 #	args = parser.parse_args(['-np'])
 	print()
-	print('Working with server {}'.format(remote_addr))
+	print('INFO: Working with server {}'.format(remote_addr))
 	
 	#get db connector and cursor
 	db = get_db()
@@ -52,10 +52,10 @@ def main():
 						curs.execute(
 							"UPDATE gene set canonical = 't' WHERE name[2] = '{}'".format(nm_acc)
 						)
-						print("Updating {}".format(nm_acc))
+						print("INFO: Updating {}".format(nm_acc))
 						i += 1
 	db.commit()
-	print("{} genes modified".format(i))
+	print("INFO: {} genes modified".format(i))
 	
 	if args.update_np:
 		curs.execute(
@@ -75,10 +75,10 @@ def main():
 						curs.execute(
 							"UPDATE gene set np = '{0}' WHERE name[2] = '{1}'".format(np_acc, nm_acc)
 						)
-						print("Updating gene NP acc no of {0} to {1}".format(nm_acc, np_acc))
+						print("INFO: Updating gene NP acc no of {0} to {1}".format(nm_acc, np_acc))
 						j += 1
 		db.commit()
-		print("{} NP acc no modified".format(j))
+		print("INFO: {} NP acc no modified".format(j))
 	if args.update_uniprot:
 		curs.execute(
 			"SELECT  name[1] as HGNC, name[2] as nm, np, uniprot_id FROM gene ORDER BY name"
@@ -91,7 +91,7 @@ def main():
 			api_response = json.loads(http.request('GET', req_url).data.decode('utf-8'))
 			l += 1
 			if l % 1000 == 0:
-				print('{0}/{1} isoforms checked)'.format(l, curs.rowcount))
+				print('INFO: {0}/{1} isoforms checked)'.format(l, curs.rowcount))
 			for keys in api_response:
 				if 'UNIPROT' in api_response[keys]:
 					match_obj = re.search(r'(NM_\d+)\.\d', keys)
@@ -103,9 +103,9 @@ def main():
 								curs.execute(
 									"UPDATE gene set uniprot_id = '{0}' WHERE name[2] = '{1}'".format(uniprot, nm_acc)
 								)
-								print("Updating gene UNIPROT id of {0} to {1}".format(nm_acc, uniprot))
+								print("INFO: Updating gene UNIPROT id of {0} to {1}".format(nm_acc, uniprot))
 								k += 1
 		db.commit()
-		print("{} UNIPROT ids modified".format(k))
+		print("INFO: {} UNIPROT ids modified".format(k))
 if __name__ == '__main__':
 	main()

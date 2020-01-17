@@ -23,7 +23,7 @@ def main():
 	ncbi_api_key = None
 	if args.ncbi_api_key is not None:
 		if not re.search(r'\w+', args.ncbi_api_key):
-			sys.exit('Invalid NCBI API key, please check')
+			sys.exit('ERROR: Invalid NCBI API key, please check')
 		else:
 			ncbi_api_key = args.ncbi_api_key
 			
@@ -49,9 +49,9 @@ def main():
 				curs.execute(
 					"UPDATE gene SET np = '{0}.{1}' WHERE name[2] = '{2}'".format(match_object.group(1), match_object.group(2), acc['name'][1])
 				)
-				print('Updated gene NP acc no of {0} to {1}.{2}'.format(acc['name'][0], match_object.group(1), match_object.group(2)))
+				print('INFO: Updated gene NP acc no of {0} to {1}.{2}'.format(acc['name'][0], match_object.group(1), match_object.group(2)))
 				i += 1
-	print("{} genes updated".format(i))
+	print("INFO: {} genes updated".format(i))
 	
 	db.commit()
 	

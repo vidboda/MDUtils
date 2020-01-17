@@ -23,11 +23,11 @@ def main():
 	if os.path.isfile(args.refgene):
 		refgeneFile = args.refgene
 	else:
-		sys.exit('Invalid input path, please check your command')
+		sys.exit('ERROR: Invalid input path, please check your command')
 	ncbi_api_key = None
 	if args.ncbi_api_key is not None:
 		if not re.search(r'\w+', args.ncbi_api_key):
-			sys.exit('Invalid NCBI API key, please check')
+			sys.exit('ERROR: Invalid NCBI API key, please check')
 		else:
 			ncbi_api_key = args.ncbi_api_key
 	#get db connector and cursor
@@ -48,7 +48,7 @@ def main():
 			"UPDATE gene SET canonical = 't' WHERE name[2] = '{}'".format(acc['name'][1])
 		)
 		#lacking_nm.append(acc['name'][0])
-		print('Updated gene {} (1st method)'.format(acc['name'][0]))
+		print('INFO: Updated gene {} (1st method)'.format(acc['name'][0]))
 		i += 1
 	db.commit()
 	#second check the refgene file
@@ -77,7 +77,7 @@ def main():
 					curs.execute(
 					 	"UPDATE gene SET canonical = 't' WHERE name = '{}'".format(postGene)
 					)
-					print('Updated gene {} (2nd method)'.format(mdnm['name'][0]))
+					print('INFO: Updated gene {} (2nd method)'.format(mdnm['name'][0]))
 				#else:
 					#lacking_nm.append(geneLineList[2])
 	#print(lacking_nm)
@@ -100,15 +100,15 @@ def main():
 					"UPDATE gene SET canonical = 't' WHERE name[2] = '{}'".format(acc['name'][1])
 				)
 				i += 1
-				print('Updated gene {} (3rd method)'.format(acc['name'][0]))
+				print('INFO: Updated gene {} (3rd method)'.format(acc['name'][0]))
 			if acc['np'] == 'NP_000000.0':
 				if re.search(r'accession\s"NP_\d+",\s+version\s\d$', eutils_response, re.MULTILINE):
 					match_object = re.search(r'accession\s"(NP_\d+)",\s+version\s(\d+)$', eutils_response, re.MULTILINE)
 					curs.execute(
 						"UPDATE gene SET np = '{0}.{1}' WHERE name[2] = '{2}'".format(match_object.group(1), match_object.group(2), acc['name'][1])
 					)
-					print('Updated gene NP acc no of {0} to {1}.{2}'.format(acc['name'][0], match_object.group(1), match_object.group(2)))
-	print("{} genes modified".format(i))
+					print('INFO: Updated gene NP acc no of {0} to {1}.{2}'.format(acc['name'][0], match_object.group(1), match_object.group(2)))
+	print("INFO: {} genes modified".format(i))
 	
 	db.commit()
 	

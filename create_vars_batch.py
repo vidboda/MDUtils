@@ -19,10 +19,10 @@ def main():
 	if os.path.isfile(args.varlist):
 		batchFile = args.varlist
 	else:
-		sys.exit('Invalid input path, please check your command')
+		sys.exit('ERROR: Invalid input path, please check your command')
 	
 	if len(args.api_key) != 43:
-		sys.exit('Invalid API key, please check it')
+		sys.exit('ERROR: Invalid API key, please check it')
 	else:
 		api_key = args.api_key
 	
@@ -30,7 +30,7 @@ def main():
 	if args.url:
 		md_base_url = args.url
 	print()
-	print('Working on server {}'.format(md_base_url))
+	print('INFO: Working on server {}'.format(md_base_url))
 	
 	http = urllib3.PoolManager(cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())
 	for variant in open(batchFile).readlines():
@@ -39,12 +39,12 @@ def main():
 		if variant != '':
 			if re.search('NM_\d+\.\d:c\..+', variant):
 				md_url = '{0}/api/variant/create/{1}/{2}'.format(md_base_url, variant, api_key)
-				print('Submitting variant {0} to MobiDetails: {1}'.format(variant, md_url))
+				print('INFO: Submitting variant {0} to MobiDetails: {1}'.format(variant, md_url))
 				
 				try:
 					md_response = json.loads(http.request('GET', md_url).data.decode('utf-8'))
 				except:
-					print('Call failed for variant {}'.format(variant))
+					print('ERROR: Call failed for variant {}'.format(variant))
 					continue
 					
 				print(md_response)

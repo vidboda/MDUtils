@@ -26,7 +26,7 @@ def main():
 	genes = curs.fetchall()
 	i = 0
 	for gene in genes:
-		print("{}-{}".format(gene['name'][0], i))
+		print("INFO: {}-{}".format(gene['name'][0], i))
 		i += 1
 		#print("MD------{}".format(gene['name'][1]))
 		#get VV info for the gene
@@ -48,9 +48,9 @@ def main():
 							curs.execute(
 								"UPDATE gene SET nm_version = '{0}' WHERE name[2] = '{1}'".format(nm_version, gene['name'][1])
 							)
-							print("UPDATE gene SET nm_version = '{0}' WHERE name[2] = '{1}'".format(nm_version, gene['name'][1]))
+							print("INFO: UPDATE gene SET nm_version = '{0}' WHERE name[2] = '{1}'".format(nm_version, gene['name'][1]))
 		except:
-			print('No value for {0}'.format(gene['name'][0]))
+			print('WARNING: No value for {0}'.format(gene['name'][0]))
 	
 	db.commit()
 	
