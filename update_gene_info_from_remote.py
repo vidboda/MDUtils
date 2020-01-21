@@ -60,7 +60,7 @@ def main():
 						log('INFO', 'Updating {}'.format(nm_acc))
 						i += 1
 	db.commit()
-	info('{} genes modified'.format(i))
+	log('INFO', '{} genes modified'.format(i))
 	
 	if args.update_np:
 		curs.execute(
