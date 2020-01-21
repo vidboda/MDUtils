@@ -15,7 +15,7 @@ from MobiDetailsApp import config
 
 
 def main():
-	parser = argparse.ArgumentParser(description='Define a canonical transcript per gene', usage='python update_canonical_from_remote.py [-r remote_server_url]')
+	parser = argparse.ArgumentParser(description='Define a canonical transcript per gene and optionally updates various fields', usage='python update_canonical_from_remote.py [-r remote_server_url]')
 	parser.add_argument('-r', '--remote-server', default='', required=True, help='base URL of the remote server')
 	parser.add_argument('-np', '--update-np', default='', required=False, help='Optionally update NP for genes', action='store_true')
 	parser.add_argument('-uu', '--update-uniprot', default='', required=False, help='Optionally update UNIPROT IDs', action='store_true')
@@ -83,7 +83,7 @@ def main():
 		print("INFO: {} NP acc no modified".format(j))
 	if args.update_uniprot or args.update_creation or args.update_nm:
 		curs.execute(
-			"SELECT  name[1] as HGNC, name[2] as nm, nm_version, np, uniprot_id, variant_creation FROM gene ORDER BY name LIMIT 50"
+			"SELECT  name[1] as HGNC, name[2] as nm, nm_version, np, uniprot_id, variant_creation FROM gene ORDER BY name"
 		)
 		res = curs.fetchall()
 		k = 0
