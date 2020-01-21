@@ -86,16 +86,17 @@ def main():
 			"SELECT  name[1] as HGNC, name[2] as nm, nm_version, np, uniprot_id, variant_creation FROM gene ORDER BY name"
 		)
 		res = curs.fetchall()
-		k = 0
-		l = 0
-		m = 0
-		n = 0
+		k = l = m = n = 0
+		#l = 0
+		#m = 0
+		#n = 0
+		o = curs.rowcount
 		for gene in res:
 			req_url = '{0}/api/gene/{1}'.format(remote_addr, gene['hgnc'])
 			api_response = json.loads(http.request('GET', req_url).data.decode('utf-8'))
 			l += 1
 			if l % 1000 == 0:
-				print('INFO: {0}/{1} isoforms checked)'.format(l, curs.rowcount))
+				print('INFO: {0}/{1} isoforms checked)'.format(l, o))
 			for keys in api_response:
 				match_obj = re.search(r'(NM_\d+)\.(\d)', keys)
 				if match_obj:
@@ -112,14 +113,13 @@ def main():
 								print("INFO: Updating gene RefSeq NM accession version of {0} to {1}".format(nm_acc, nm_version))
 								n += 1
 						if 'UNIPROT' in api_response[keys] and args.update_uniprot:					
-							if match_obj:
-								uniprot = api_response[keys]['UNIPROT']
-								if uniprot != gene['uniprot_id']:
-									curs.execute(
-										"UPDATE gene set uniprot_id = '{0}' WHERE name[2] = '{1}'".format(uniprot, nm_acc)
-									)
-									print("INFO: Updating gene UNIPROT id of {0} to {1}".format(nm_acc, uniprot))
-									k += 1
+							uniprot = api_response[keys]['UNIPROT']
+							if uniprot != gene['uniprot_id']:
+								curs.execute(
+									"UPDATE gene set uniprot_id = '{0}' WHERE name[2] = '{1}'".format(uniprot, nm_acc)
+								)
+								print("INFO: Updating gene UNIPROT id of {0} to {1}".format(nm_acc, uniprot))
+								k += 1
 						if 'variantCreationTag' in api_response[keys] and args.update_creation:
 							tag = api_response[keys]['variantCreationTag']
 							if tag != gene['variant_creation']:
