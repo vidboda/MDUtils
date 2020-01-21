@@ -9,6 +9,11 @@ import json
 #get a txt file list of variants in the format NM_XXXXX.Y:c.hgvscdna
 #and calls MD API to create the variants
 
+def log(level, text):
+	if level == 'ERROR':
+		sys.exit('[{0}]: {1}'.format(level, text))
+	print('[{0}]: {1}'.format(level, text))
+
 def main():
 	parser = argparse.ArgumentParser(description='Creates variants in MobiDetails (batch mode)', usage='python create_vars_batch.py -l path/to/variant_list.txt')
 	parser.add_argument('-l', '--varlist', default='', required=True, help='Path to the text (.txt) file containing the list of variants in the format NM_XXXXX.Y:c.hgvscdna.')
@@ -19,10 +24,10 @@ def main():
 	if os.path.isfile(args.varlist):
 		batchFile = args.varlist
 	else:
-		sys.exit('ERROR: Invalid input path, please check your command')
+		log('ERROR', 'Invalid input path, please check your command')
 	
 	if len(args.api_key) != 43:
-		sys.exit('ERROR: Invalid API key, please check it')
+		log('ERROR', 'Invalid API key, please check it')
 	else:
 		api_key = args.api_key
 	
@@ -30,7 +35,7 @@ def main():
 	if args.url:
 		md_base_url = args.url
 	print()
-	print('INFO: Working on server {}'.format(md_base_url))
+	log('INFO', 'Working on server {}'.format(md_base_url))
 	
 	http = urllib3.PoolManager(cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())
 	for variant in open(batchFile).readlines():
@@ -39,15 +44,15 @@ def main():
 		if variant != '':
 			if re.search('NM_\d+\.\d:c\..+', variant):
 				md_url = '{0}/api/variant/create/{1}/{2}'.format(md_base_url, variant, api_key)
-				print('INFO: Submitting variant {0} to MobiDetails: {1}'.format(variant, md_url))
+				log('INFO', 'Submitting variant {0} to MobiDetails: {1}'.format(variant, md_url))
 				
 				try:
 					md_response = json.loads(http.request('GET', md_url).data.decode('utf-8'))
 				except:
-					print('ERROR: Call failed for variant {}'.format(variant))
+					log('WARNING', 'Call failed for variant {}'.format(variant))
 					continue
 					
-				print(md_response)
+				log('INFO', md_response)
 				print()
 
 if __name__ == '__main__':

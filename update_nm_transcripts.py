@@ -9,6 +9,11 @@ from insert_genes import get_db
 #requires MobiDetails config module + database.ini file
 from MobiDetailsApp import config
 
+def log(level, text):
+	if level == 'ERROR':
+		sys.exit('[{0}]: {1}'.format(level, text))
+	print('[{0}]: {1}'.format(level, text))
+
 def main():
 	#script meant to be croned to update NM acc versions in MD according to VariantValidator
 	#to be ran after uta docker update for example
@@ -21,13 +26,16 @@ def main():
 	curs = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
 	
 	curs.execute(#get genes
-		"SELECT name, nm_version FROM gene ORDER BY name"
+		"SELECT name, nm_version FROM gene WHERE name[1] LIKE 'P%' ORDER BY name"
 	)
 	genes = curs.fetchall()
+	count = curs.rowcount
 	i = 0
 	for gene in genes:
-		print("INFO: {}-{}".format(gene['name'][0], i))
+		log('INFO', '{}-{}'.format(gene['name'][0], i))
 		i += 1
+		if i % 500 == 0:
+			log('INFO', '{0}/{1} genes checked'.format(i, count))
 		#print("MD------{}".format(gene['name'][1]))
 		#get VV info for the gene
 		http = urllib3.PoolManager(cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())
@@ -49,9 +57,9 @@ def main():
 								"UPDATE gene SET nm_version = '{0}' WHERE name[2] = '{1}'".format(nm_version, gene['name'][1])
 							)
 							db.commit()
-							print("INFO: UPDATE gene SET nm_version = '{0}' WHERE name[2] = '{1}'".format(nm_version, gene['name'][1]))
+							log('INFO', "UPDATE gene SET nm_version = '{0}' WHERE name[2] = '{1}'".format(nm_version, gene['name'][1]))
 		except:
-			print('WARNING: No value for {0}'.format(gene['name'][0]))
+			log('WARNING', 'No value for {0}'.format(gene['name'][0]))
 			
 	
 	

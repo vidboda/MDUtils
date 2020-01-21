@@ -8,6 +8,10 @@ from insert_genes import get_db
 #requires MobiDetails config module + database.ini file
 from MobiDetailsApp import config
 
+def log(level, text):
+	if level == 'ERROR':
+		sys.exit('[{0}]: {1}'.format(level, text))
+	print('[{0}]: {1}'.format(level, text))
 
 def main():
 	parser = argparse.ArgumentParser(description='Insert gnomAD data into MD', usage='python insert_gnomad.py [-d path/to/dir/containing/gnomad.v2.1.1.lof_metrics.by_gene.txt]')
@@ -58,7 +62,7 @@ def main():
 				 	"INSERT INTO gene_annotation VALUES('{0}','{1}','{2}','{3}','{4}','{5}','{6}','{7}','{8}','{9}')".format(postGene,oeValues['synoe'],oeValues['synlower'],oeValues['synupper'],oeValues['misoe'],oeValues['mislower'],oeValues['misupper'],oeValues['lofoe'],oeValues['loflower'],oeValues['lofupper'])
 				)
 
-	print(i)			
+	log('INFO', '{} annotations added'.format(i))			
 	
 	db.commit()
 	

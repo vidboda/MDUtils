@@ -46,7 +46,7 @@ def main():
 	http = urllib3.PoolManager(cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())
 	
 	curs.execute(
-		"SELECT DISTINCT(name), nm_version, variant_creation FROM gene WHERE canonical = 't' ORDER BY name"
+		"SELECT DISTINCT(name), nm_version, variant_creation FROM gene WHERE canonical = 't' AND name[1] LIKE 'P%' ORDER BY name"
 	)
 	can = curs.fetchall()
 	num_can = curs.rowcount
@@ -58,7 +58,7 @@ def main():
 	for gene in can:
 		i += 1
 		if i % 500 == 0:
-			print('INFO: {0}/{1} genes checked'.format(i, curs.rowcount))
+			log('INFO', '{0}/{1} genes checked'.format(i, num_can))
 		variant = '{0}.{1}:c.1A>T'.format(gene['name'][1], gene['nm_version'])
 		md_url = '{0}/api/variant/create/{1}/{2}'.format(remote_addr, variant, api_key)
 		try:

@@ -9,7 +9,10 @@ import psycopg2.extras
 #requires MobiDetails config module + database.ini file
 from MobiDetailsApp import config
 
-
+def log(level, text):
+	if level == 'ERROR':
+		sys.exit('[{0}]: {1}'.format(level, text))
+	print('[{0}]: {1}'.format(level, text))
 
 def get_db():
 	try:
@@ -67,13 +70,13 @@ def main():
 							line = re.sub(",'NULL',", ",NULL,", line)
 							curs.execute(line)
 						except psycopg2.Error as e:
-							print("{0} - {1} - {2}".format(sqlFile, line, e))
+							log('ERROR', '{0} - {1} - {2}'.format(sqlFile, line, e))
 					else:
-						print('ERROR: non matching line {0} in file {1}'.format(line, sqlFile))
+						log('WARNING', 'non matching line {0} in file {1}'.format(line, sqlFile))
 				
-				print('INFO: {0} inserted - #{1}'.format(sqlFile, str(i)))
+				log('INFO', '{0} inserted - #{1}'.format(sqlFile, str(i)))
 		else:
-			print('ERROR: Bad regexp for {}'.format(sqlFile))
+			log('WARNING', 'Bad regexp for {}'.format(sqlFile))
 		
 	db.commit()
 	

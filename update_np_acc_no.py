@@ -14,6 +14,11 @@ from MobiDetailsApp import config
 
 #update genes for which np acc no is NP_000000.0
 
+def log(level, text):
+	if level == 'ERROR':
+		sys.exit('[{0}]: {1}'.format(level, text))
+	print('[{0}]: {1}'.format(level, text))
+
 def main():
 	parser = argparse.ArgumentParser(description='Defines NP RefSeq acc_no when lacking', usage='python update_np_acc_no.py -k ncbi_api_key')
 	parser.add_argument('-k', '--ncbi-api-key', default=None, required=True, help='NCBI Entrez API key.')
@@ -23,7 +28,7 @@ def main():
 	ncbi_api_key = None
 	if args.ncbi_api_key is not None:
 		if not re.search(r'\w+', args.ncbi_api_key):
-			sys.exit('ERROR: Invalid NCBI API key, please check')
+			log('ERROR', 'Invalid NCBI API key, please check')
 		else:
 			ncbi_api_key = args.ncbi_api_key
 			
@@ -37,7 +42,7 @@ def main():
 		http = urllib3.PoolManager(cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())
 		#get list of remaining genes with no canonical defined
 		curs.execute(
-			"SELECT name, np FROM gene WHERE np = 'NP_000000.0'"
+			"SELECT name, np FROM gene WHERE np = 'NP_000000.0' ORDER by name"
 		)
 		res = curs.fetchall();
 		for acc in res:
@@ -49,9 +54,9 @@ def main():
 				curs.execute(
 					"UPDATE gene SET np = '{0}.{1}' WHERE name[2] = '{2}'".format(match_object.group(1), match_object.group(2), acc['name'][1])
 				)
-				print('INFO: Updated gene NP acc no of {0} to {1}.{2}'.format(acc['name'][0], match_object.group(1), match_object.group(2)))
+				log('INFO', 'Updated gene NP acc no of {0} to {1}.{2}'.format(acc['name'][0], match_object.group(1), match_object.group(2)))
 				i += 1
-	print("INFO: {} genes updated".format(i))
+	log('INFO', '{} genes updated'.format(i))
 	
 	db.commit()
 	

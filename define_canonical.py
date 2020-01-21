@@ -14,6 +14,11 @@ from MobiDetailsApp import config
 #first genes in database did not have canonical transcripts.
 #fixed with the refGenecanonical file
 
+def log(level, text):
+	if level == 'ERROR':
+		sys.exit('[{0}]: {1}'.format(level, text))
+	print('[{0}]: {1}'.format(level, text))
+
 def main():
 	parser = argparse.ArgumentParser(description='Define a canonical transcript per gene', usage='python define_canonical.py [-r path/to/refGeneCanonical_2019_09_23.txt]')
 	parser.add_argument('-r', '--refgene', default='', required=True, help='Path to the file containing the canonical refSeq IDs per gene')
@@ -48,7 +53,7 @@ def main():
 			"UPDATE gene SET canonical = 't' WHERE name[2] = '{}'".format(acc['name'][1])
 		)
 		#lacking_nm.append(acc['name'][0])
-		print('INFO: Updated gene {} (1st method)'.format(acc['name'][0]))
+		log('INFO', 'Updated gene {} (1st method)'.format(acc['name'][0]))
 		i += 1
 	db.commit()
 	#second check the refgene file
@@ -77,7 +82,7 @@ def main():
 					curs.execute(
 					 	"UPDATE gene SET canonical = 't' WHERE name = '{}'".format(postGene)
 					)
-					print('INFO: Updated gene {} (2nd method)'.format(mdnm['name'][0]))
+					log('INFO', 'Updated gene {} (2nd method)'.format(mdnm['name'][0]))
 				#else:
 					#lacking_nm.append(geneLineList[2])
 	#print(lacking_nm)
@@ -100,15 +105,15 @@ def main():
 					"UPDATE gene SET canonical = 't' WHERE name[2] = '{}'".format(acc['name'][1])
 				)
 				i += 1
-				print('INFO: Updated gene {} (3rd method)'.format(acc['name'][0]))
+				log('INFO', 'Updated gene {} (3rd method)'.format(acc['name'][0]))
 			if acc['np'] == 'NP_000000.0':
 				if re.search(r'accession\s"NP_\d+",\s+version\s\d$', eutils_response, re.MULTILINE):
 					match_object = re.search(r'accession\s"(NP_\d+)",\s+version\s(\d+)$', eutils_response, re.MULTILINE)
 					curs.execute(
 						"UPDATE gene SET np = '{0}.{1}' WHERE name[2] = '{2}'".format(match_object.group(1), match_object.group(2), acc['name'][1])
 					)
-					print('INFO: Updated gene NP acc no of {0} to {1}.{2}'.format(acc['name'][0], match_object.group(1), match_object.group(2)))
-	print("INFO: {} genes modified".format(i))
+					log('INFO', 'Updated gene NP acc no of {0} to {1}.{2}'.format(acc['name'][0], match_object.group(1), match_object.group(2)))
+	log('INFO', '{} genes modified'.format(i))
 	
 	db.commit()
 	
