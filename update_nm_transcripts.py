@@ -48,11 +48,13 @@ def main():
 							curs.execute(
 								"UPDATE gene SET nm_version = '{0}' WHERE name[2] = '{1}'".format(nm_version, gene['name'][1])
 							)
+							db.commit()
 							print("INFO: UPDATE gene SET nm_version = '{0}' WHERE name[2] = '{1}'".format(nm_version, gene['name'][1]))
 		except:
 			print('WARNING: No value for {0}'.format(gene['name'][0]))
+			
 	
-	db.commit()
+	
 	
 	
 		

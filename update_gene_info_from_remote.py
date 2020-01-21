@@ -12,7 +12,10 @@ from MobiDetailsApp import config
 #fix genes in database did not have canonical transcripts.
 #fix from remote MD server which has the information (typically dev server), using the API
 #fix UNIPORT IDs, using the MDAPI and Uniprot API
-
+def log(level, text):
+	if level == 'ERROR':
+		sys.exit('[{0}]: {1}'.format(level, text))
+	print('[{0}]: {1}'.format(level, text))
 
 def main():
 	parser = argparse.ArgumentParser(description='Define a canonical transcript per gene and optionally updates various fields', usage='python update_canonical_from_remote.py [-r remote_server_url]')
@@ -26,7 +29,7 @@ def main():
 	remote_addr = args.remote_server
 #	args = parser.parse_args(['-np'])
 	print()
-	print('INFO: Working with server {}'.format(remote_addr))
+	log('INFO', 'Working with server {}'.format(remote_addr))
 	
 	#get db connector and cursor
 	db = get_db()
@@ -54,10 +57,10 @@ def main():
 						curs.execute(
 							"UPDATE gene set canonical = 't' WHERE name[2] = '{}'".format(nm_acc)
 						)
-						print("INFO: Updating {}".format(nm_acc))
+						log('INFO', 'Updating {}'.format(nm_acc))
 						i += 1
 	db.commit()
-	print("INFO: {} genes modified".format(i))
+	info('{} genes modified'.format(i))
 	
 	if args.update_np:
 		curs.execute(
@@ -77,10 +80,10 @@ def main():
 						curs.execute(
 							"UPDATE gene set np = '{0}' WHERE name[2] = '{1}'".format(np_acc, nm_acc)
 						)
-						print("INFO: Updating gene NP acc no of {0} to {1}".format(nm_acc, np_acc))
+						log('INFO', 'Updating gene NP acc no of {0} to {1}'.format(nm_acc, np_acc))
 						j += 1
 		db.commit()
-		print("INFO: {} NP acc no modified".format(j))
+		log('INFO', '{} NP acc no modified'.format(j))
 	if args.update_uniprot or args.update_creation or args.update_nm:
 		curs.execute(
 			"SELECT  name[1] as HGNC, name[2] as nm, nm_version, np, uniprot_id, variant_creation FROM gene ORDER BY name"
@@ -96,7 +99,7 @@ def main():
 			api_response = json.loads(http.request('GET', req_url).data.decode('utf-8'))
 			l += 1
 			if l % 1000 == 0:
-				print('INFO: {0}/{1} isoforms checked)'.format(l, o))
+				log('INFO', '{0}/{1} isoforms checked)'.format(l, o))
 			for keys in api_response:
 				match_obj = re.search(r'(NM_\d+)\.(\d)', keys)
 				if match_obj:
@@ -110,7 +113,7 @@ def main():
 								curs.execute(
 									"UPDATE gene set nm_version = '{0}' WHERE name[2] = '{1}'".format(nm_version, nm_acc)
 								)
-								print("INFO: Updating gene RefSeq NM accession version of {0} to {1}".format(nm_acc, nm_version))
+								log('INFO', 'Updating gene RefSeq NM accession version of {0} to {1}'.format(nm_acc, nm_version))
 								n += 1
 						if 'UNIPROT' in api_response[keys] and args.update_uniprot:					
 							uniprot = api_response[keys]['UNIPROT']
@@ -118,7 +121,7 @@ def main():
 								curs.execute(
 									"UPDATE gene set uniprot_id = '{0}' WHERE name[2] = '{1}'".format(uniprot, nm_acc)
 								)
-								print("INFO: Updating gene UNIPROT id of {0} to {1}".format(nm_acc, uniprot))
+								log('INFO', 'Updating gene UNIPROT id of {0} to {1}'.format(nm_acc, uniprot))
 								k += 1
 						if 'variantCreationTag' in api_response[keys] and args.update_creation:
 							tag = api_response[keys]['variantCreationTag']
@@ -126,12 +129,12 @@ def main():
 								curs.execute(
 									"UPDATE gene set variant_creation = '{0}' WHERE name[2] = '{1}'".format(tag, nm_acc)
 								)
-								print("INFO: Updating gene variantCreationTag of {0} to {1}".format(nm_acc, tag))
+								log('INFO', 'Updating gene variantCreationTag of {0} to {1}'.format(nm_acc, tag))
 								m += 1
 		db.commit()
-		print("INFO: {} UNIPROT IDs modified".format(k))
-		print("INFO: {} variantCreationTag modified".format(m))
-		print("INFO: {} RefSeq NM accession version modified".format(n))
+		log('INFO', '{} UNIPROT IDs modified'.format(k))
+		log('INFO', '[INFO]: {} variantCreationTag modified'.format(m))
+		log('INFO', '[INFO]: {} RefSeq NM accession version modified'.format(n))
 	
 if __name__ == '__main__':
 	main()
