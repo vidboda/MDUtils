@@ -21,8 +21,9 @@ def log(level, text):
 
 def main():
 	parser = argparse.ArgumentParser(description='Define a canonical transcript per gene', usage='python define_canonical.py [-r path/to/refGeneCanonical_2019_09_23.txt]')
-	parser.add_argument('-r', '--refgene', default='', required=True, help='Path to the file containing the canonical refSeq IDs per gene')
+	parser.add_argument('-r', '--refgene', default='', required=True, help='Path to the file containing the canonical refSeq IDs per gene (from UCSC)')
 	parser.add_argument('-k', '--ncbi-api-key', default=None, required=False, help='NCBI Entrez API key. If not provided, 3rd method is not executed')
+	parser.add_argument('-u', '--update-refgene', default=None, required=False, help='Update RefGene (canonical) for genes w/ on variants based on NCBI (requires NCBI API key)', action='store_true')
 	args = parser.parse_args()
 	#get file 
 	if os.path.isfile(args.refgene):
@@ -64,7 +65,7 @@ def main():
 		#print(geneLineList[2])
 		if geneLineList[2] != 'n/a' and geneLineList[2] != 'hg38.refGene.name2':
 			curs.execute(#gene exists in MD (no main already set)
-				"SELECT DISTINCT(name[1]) FROM gene WHERE name[1] = '{}' AND name[1] NOT IN (SELECT name[1] FROM gene WHERE canonical = 't')".format(geneLineList[2])
+				"SELECT DISTINCT(name[1]) FROM gene WHERE name[1] = '{}' AND name[1] NOT IN (SELECT name[1] FROM gene WHERE canonical = 't') ORDER BY name".format(geneLineList[2])
 			)
 			mdgene = curs.fetchone()
 			
@@ -93,7 +94,7 @@ def main():
 		http = urllib3.PoolManager(cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())
 		#get list of remaining genes with no canonical defined
 		curs.execute(
-			"SELECT name, np FROM gene WHERE name[1] NOT IN (SELECT name[1] FROM gene WHERE canonical='t')"
+			"SELECT name, np FROM gene WHERE name[1] NOT IN (SELECT name[1] FROM gene WHERE canonical='t') ORDER BY name"
 		)
 		res = curs.fetchall();
 		for acc in res:
@@ -113,9 +114,29 @@ def main():
 						"UPDATE gene SET np = '{0}.{1}' WHERE name[2] = '{2}'".format(match_object.group(1), match_object.group(2), acc['name'][1])
 					)
 					log('INFO', 'Updated gene NP acc no of {0} to {1}.{2}'.format(acc['name'][0], match_object.group(1), match_object.group(2)))
+		if args.update_refgene:
+			#get genes w/ no variants, and at least 2 isoforms to check which one should be canonical
+			curs.execute(
+				"SELECT name, canonical FROM gene WHERE (name[1] NOT IN (SELECT gene_name[1] FROM variant_feature)) AND (name[1] IN (SELECT name[1] FROM gene GROUP BY name[1] HAVING COUNT (name[1]) > 1)) ORDER BY name"
+			)
+			res = curs.fetchall();
+			for acc in res:
+				ncbi_url = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&id={0}&api_key={1}'.format(acc['name'][1], ncbi_api_key)
+				eutils_response = http.request('GET', ncbi_url).data.decode('utf-8')
+				if re.search(r'"RefSeq\sSelect"', eutils_response) and acc['canonical'] == 0:
+					curs.execute(
+						"UPDATE gene SET canonical = 'f' WHERE name[1] = '{}'".format(acc['name'][0])
+					)
+					#log('INFO', "UPDATE gene SET canonical = 'f' WHERE name[1] = '{}'".format(acc['name'][0]))
+					curs.execute(
+						"UPDATE gene SET canonical = 't' WHERE name[2] = '{}'".format(acc['name'][1])
+					)
+					#log('INFO', "UPDATE gene SET canonical = 't' WHERE name[2] = '{}'".format(acc['name'][1]))
+					i += 1
+					log('INFO', 'Updated gene {} (4th method)'.format(acc['name'][0]))
 	log('INFO', '{} genes modified'.format(i))
 	
-	db.commit()
+	#db.commit()
 	
 	
 		

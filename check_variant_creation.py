@@ -14,6 +14,7 @@ from MobiDetailsApp import config
 #to be used on private dev server
 
 def log(level, text):
+	print()
 	if level == 'ERROR':
 		sys.exit('[{0}]: {1}'.format(level, text))
 	print('[{0}]: {1}'.format(level, text))
@@ -46,7 +47,7 @@ def main():
 	http = urllib3.PoolManager(cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())
 	
 	curs.execute(
-		"SELECT DISTINCT(name), nm_version, variant_creation FROM gene WHERE canonical = 't' AND name[1] LIKE 'P%' ORDER BY name"
+		"SELECT DISTINCT(name), nm_version, variant_creation FROM gene WHERE canonical = 't' ORDER BY name"
 	)
 	can = curs.fetchall()
 	num_can = curs.rowcount
@@ -56,6 +57,7 @@ def main():
 	variant = 'c.1A>T'
 	failed_genes = []
 	for gene in can:
+		print('.', end="", flush=True)
 		i += 1
 		if i % 500 == 0:
 			log('INFO', '{0}/{1} genes checked'.format(i, num_can))
@@ -66,6 +68,28 @@ def main():
 			if 'mobidetails_error' in md_response:
 				j += 1
 				log('WARNING', 'variant creation failed for gene {0} with error {1}'.format(gene['name'], md_response['mobidetails_error']))
+				new_nm_match_obj = re.search(r'A more recent version of the selected reference sequence NM_\d+\.\d is available \((NM_\d+)\.(\d)\)', md_response['mobidetails_error'])
+				if new_nm_match_obj:
+					nm_to_check = new_nm_match_obj.group(1)
+					new_ver = new_nm_match_obj.group(2)
+					if nm_to_check == gene['name'][1]:
+						curs.execute(
+							"UPDATE gene SET nm_version = '{0}' WHERE name[2] = '{}'".format(new_ver, gene['name'][1])
+						)
+					#recheck
+					variant_2 = '{0}.{1}:c.1A>T'.format(gene['name'][1], new_ver)
+					md_url_2 = '{0}/api/variant/create/{1}/{2}'.format(remote_addr, variant_2, api_key)
+					try:
+						md_response_2 = json.loads(http.request('GET', md_url_2).data.decode('utf-8'))
+						if 'mobidetails_id' in md_response_2 and gene['variant_creation'] != 'ok':
+							curs.execute(
+								"UPDATE gene SET variant_creation = 'ok' WHERE name[2] = '{}'".format(gene['name'][1])
+							)
+							continue
+					except:
+						k += 1
+						failed_genes.append('{}'.format(gene['name'][0]))
+						continue
 				if re.search(r'cannot be mapped directly to genome build GRCh38', md_response['mobidetails_error']):
 					curs.execute(
 						"UPDATE gene SET variant_creation = 'hg38_mapping_default' WHERE name[2] = '{}'".format(gene['name'][1])

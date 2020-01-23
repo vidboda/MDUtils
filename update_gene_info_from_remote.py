@@ -13,6 +13,7 @@ from MobiDetailsApp import config
 #fix from remote MD server which has the information (typically dev server), using the API
 #fix UNIPORT IDs, using the MDAPI and Uniprot API
 def log(level, text):
+	print()
 	if level == 'ERROR':
 		sys.exit('[{0}]: {1}'.format(level, text))
 	print('[{0}]: {1}'.format(level, text))
@@ -20,6 +21,7 @@ def log(level, text):
 def main():
 	parser = argparse.ArgumentParser(description='Define a canonical transcript per gene and optionally updates various fields', usage='python update_canonical_from_remote.py [-r remote_server_url]')
 	parser.add_argument('-r', '--remote-server', default='', required=True, help='base URL of the remote server')
+	parser.add_argument('-uca', '--update-can-all', default='', required=False, help='Optionally update canonical for all genes w/ no variants', action='store_true')
 	parser.add_argument('-np', '--update-np', default='', required=False, help='Optionally update NP for genes', action='store_true')
 	parser.add_argument('-uu', '--update-uniprot', default='', required=False, help='Optionally update UNIPROT IDs', action='store_true')
 	parser.add_argument('-uc', '--update-creation', default='', required=False, help='Optionally update variant_creation tag', action='store_true')
@@ -60,7 +62,38 @@ def main():
 						log('INFO', 'Updating {}'.format(nm_acc))
 						i += 1
 	db.commit()
-	log('INFO', '{} genes modified'.format(i))
+	log('INFO', '{} genes modified (canonical)'.format(i))
+	i = 0
+	if args.update_can_all:
+		#get genes with no variants and at least 2 isoforms to see if we need to update canonical
+		curs.execute(
+			"SELECT name, canonical FROM gene WHERE (name[1] NOT IN (SELECT gene_name[1] FROM variant_feature)) AND (name[1] IN (SELECT name[1] FROM gene GROUP BY name[1] HAVING COUNT (name[1]) > 1)) ORDER BY name"
+		)
+		res = curs.fetchall()
+		for acc in res:
+			req_url = '{0}/api/gene/{1}'.format(remote_addr, gene['name'][0])
+			api_response = json.loads(http.request('GET', req_url).data.decode('utf-8'))
+			for keys in api_response:
+				if 'canonical' in api_response[keys]:
+					if api_response[keys]['canonical'] is True and acc['canonical'] == 0:
+						if re.search(r'NM_\d+\.\d', keys):
+							match_obj = re.search(r'(NM_\d+)\.\d', keys)
+							nm_acc = match_obj.group(1)
+							#double check
+							if nm_acc == acc['name'][1]:
+								curs.execute(
+									"UPDATE gene SET canonical = 'f' WHERE name[1] = '{}'".format(acc['name'][0])
+								)
+								#log('INFO', "UPDATE gene SET canonical = 'f' WHERE name[1] = '{}'".format(acc['name'][0]))
+								curs.execute(
+									"UPDATE gene SET canonical = 't' WHERE name[2] = '{}'".format(acc['name'][1])
+								)
+								#log('INFO', "UPDATE gene SET canonical = 't' WHERE name[2] = '{}'".format(acc['name'][1]))
+								i += 1
+								log('INFO', 'Updated gene {} (4th method)'.format(acc['name'][0]))
+		db.commit()
+				
+	log('INFO', '{} genes modified (canonical all)'.format(i))
 	
 	if args.update_np:
 		curs.execute(

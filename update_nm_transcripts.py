@@ -10,6 +10,7 @@ from insert_genes import get_db
 from MobiDetailsApp import config
 
 def log(level, text):
+	print()
 	if level == 'ERROR':
 		sys.exit('[{0}]: {1}'.format(level, text))
 	print('[{0}]: {1}'.format(level, text))
@@ -26,16 +27,17 @@ def main():
 	curs = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
 	
 	curs.execute(#get genes
-		"SELECT name, nm_version FROM gene WHERE name[1] LIKE 'P%' ORDER BY name"
+		"SELECT name, nm_version FROM gene ORDER BY name"
 	)
 	genes = curs.fetchall()
 	count = curs.rowcount
 	i = 0
 	for gene in genes:
-		log('INFO', '{}-{}'.format(gene['name'][0], i))
+		#log('INFO', '{}-{}'.format(gene['name'][0], i))
+		print('.', end="", flush=True)
 		i += 1
 		if i % 500 == 0:
-			log('INFO', '{0}/{1} genes checked'.format(i, count))
+			log('INFO', '{0}/{1} isoforms checked'.format(i, count))
 		#print("MD------{}".format(gene['name'][1]))
 		#get VV info for the gene
 		http = urllib3.PoolManager(cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())
@@ -44,6 +46,7 @@ def main():
 		try:
 			vv_data = json.loads(http.request('GET', vv_url).data.decode('utf-8'))
 			if 'transcripts' in vv_data:
+				current_nm = gene['nm_version']
 				for transcript in vv_data['transcripts']:
 					#print("VV------{}".format(transcript['reference']))
 					match_object = re.search('^(N[MR]_\d+)\.(\d{1,2})', transcript['reference'])
@@ -51,12 +54,13 @@ def main():
 						nm_acc = match_object.group(1)
 						#if nm_acc == gene['name'][1]:
 						nm_version = match_object.group(2)
-						if nm_acc == gene['name'][1] and int(nm_version) > int(gene['nm_version']):
+						if nm_acc == gene['name'][1] and int(nm_version) > int(current_nm):
 							#print("IN--{}-{}-{}-{}-{}-".format(vv_data['current_symbol'], transcript['reference'], gene['name'][1], nm_version, gene['nm_version']))
 							curs.execute(
 								"UPDATE gene SET nm_version = '{0}' WHERE name[2] = '{1}'".format(nm_version, gene['name'][1])
 							)
 							db.commit()
+							current_nm = nm_version
 							log('INFO', "UPDATE gene SET nm_version = '{0}' WHERE name[2] = '{1}'".format(nm_version, gene['name'][1]))
 		except:
 			log('WARNING', 'No value for {0}'.format(gene['name'][0]))

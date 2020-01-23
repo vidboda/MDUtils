@@ -16,6 +16,7 @@ from MobiDetailsApp import config
 #check UNIPROT IDs
 
 def log(level, text):
+	print()
 	if level == 'ERROR':
 		sys.exit('[{0}]: {1}'.format(level, text))
 	print('[{0}]: {1}'.format(level, text))
@@ -36,6 +37,7 @@ def main():
 	i = 0
 	for gene in res:
 		#ncbi
+		print('.', end="", flush=True)
 		i += 1
 		if i % 500 == 0:
 			log('INFO', '{0}/{1} genes checked'.format(i, count))
