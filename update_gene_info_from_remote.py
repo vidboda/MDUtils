@@ -13,7 +13,6 @@ from MobiDetailsApp import config
 #fix from remote MD server which has the information (typically dev server), using the API
 #fix UNIPORT IDs, using the MDAPI and Uniprot API
 def log(level, text):
-	print()
 	if level == 'ERROR':
 		sys.exit('[{0}]: {1}'.format(level, text))
 	print('[{0}]: {1}'.format(level, text))
