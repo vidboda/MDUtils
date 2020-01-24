@@ -71,7 +71,7 @@ def main():
 		)
 		res = curs.fetchall()
 		for acc in res:
-			req_url = '{0}/api/gene/{1}'.format(remote_addr, gene['name'][0])
+			req_url = '{0}/api/gene/{1}'.format(remote_addr, acc['name'][0])
 			api_response = json.loads(http.request('GET', req_url).data.decode('utf-8'))
 			for keys in api_response:
 				if 'canonical' in api_response[keys]:
