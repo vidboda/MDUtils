@@ -30,7 +30,7 @@ You need to install some packages:
 
 ```bash
 
-pip install -r requirements.txt
+python3 -m pip install -r requirements.txt
 
 ```
 
@@ -38,7 +38,7 @@ pip install -r requirements.txt
 
 ```bash
 
-pip install -r requirements_create_only.txt
+python3 -m pip install -r requirements_create_only.txt
 
 ```
 
@@ -60,7 +60,7 @@ python3 -m venv venv
 
 ```bash
 
-pip install -r requirements.txt
+python3 -m pip install -r requirements.txt
 
 ```
 
@@ -68,7 +68,7 @@ pip install -r requirements.txt
 
 ```bash
 
-pip install -r requirements_create_only.txt
+python3 -m pip install -r requirements_create_only.txt
 
 ```
 
