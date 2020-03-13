@@ -65,7 +65,7 @@ def main():
                         if match_response and \
                                 match_response.group(2) != acc_version and \
                                 match_response.group(1) == acc_number:
-                            # get good accession version
+                            # get correct accession version
                             acc_version = match_response.group(2)
                 except Exception:
                     log('WARNING', 'RefSeq accession number {} is not available in MobiDetails'.format(match_obj.group(1)))
