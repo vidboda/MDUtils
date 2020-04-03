@@ -5,6 +5,7 @@ import argparse
 import urllib3
 import certifi
 import json
+import urllib.parse
 
 # get a txt file list of variants in the format NM_XXXXX.Y:c.hgvscdna
 # and calls MD API to create the variants
@@ -72,7 +73,7 @@ def main():
                     next
 
                 # md_url = '{0}/api/variant/create/{1}/{2}'.format(md_base_url, variant, api_key)
-                md_url = '{0}/api/variant/create/{1}.{2}:{3}/{4}'.format(md_base_url, acc_number, acc_version, var, api_key)
+                md_url = '{0}/api/variant/create/{1}.{2}:{3}/{4}'.format(md_base_url, urllib.parse.quote(acc_number), urllib.parse.quote(acc_version), urllib.parse.quote(var), api_key)
                 log('INFO', 'Submitting variant {0}.{1}:{2} to MobiDetails: {3}'.format(acc_number, acc_version, var, md_url))
 
                 try:
