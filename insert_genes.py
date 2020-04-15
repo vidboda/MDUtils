@@ -6,14 +6,16 @@ import re
 import argparse
 import psycopg2
 import psycopg2.extras
+import time
 # requires MobiDetails config module + database.ini file
 from MobiDetailsApp import config
 
 
 def log(level, text):
+    localtime = time.asctime( time.localtime(time.time()) )
     if level == 'ERROR':
-        sys.exit('[{0}]: {1}'.format(level, text))
-    print('[{0}]: {1}'.format(level, text))
+        sys.exit('[{0}]: {1} - {2}'.format(level, localtime, text))
+    print('[{0}]: {1} - {2}'.format(level, localtime, text))
 
 
 def get_db():

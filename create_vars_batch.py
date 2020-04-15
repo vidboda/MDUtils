@@ -5,6 +5,7 @@ import argparse
 import urllib3
 import certifi
 import json
+import time
 import urllib.parse
 
 # get a txt file list of variants in the format NM_XXXXX.Y:c.hgvscdna
@@ -12,9 +13,10 @@ import urllib.parse
 
 
 def log(level, text):
+    localtime = time.asctime( time.localtime(time.time()) )
     if level == 'ERROR':
-        sys.exit('[{0}]: {1}'.format(level, text))
-    print('[{0}]: {1}'.format(level, text))
+        sys.exit('[{0}]: {1} - {2}'.format(level, localtime, text))
+    print('[{0}]: {1} - {2}'.format(level, localtime, text))
 
 
 def main():

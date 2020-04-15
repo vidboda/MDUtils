@@ -6,6 +6,7 @@ import psycopg2.extras
 import urllib3
 import certifi
 import json
+import time
 from insert_genes import get_db
 # requires MobiDetails config module + database.ini file
 from MobiDetailsApp import config
@@ -16,9 +17,10 @@ from MobiDetailsApp import config
 
 def log(level, text):
     print()
+    localtime = time.asctime( time.localtime(time.time()) )
     if level == 'ERROR':
-        sys.exit('[{0}]: {1}'.format(level, text))
-    print('[{0}]: {1}'.format(level, text))
+        sys.exit('[{0}]: {1} - {2}'.format(level, localtime, text))
+    print('[{0}]: {1} - {2}'.format(level, localtime, text))
 
 
 def main():
@@ -56,7 +58,7 @@ def main():
     i = 0
     j = 0
     k = 0
-    variant = 'c.1A>T'
+    # variant = 'c.1A>T'
     failed_genes = []
     for gene in can:
         print('.', end="", flush=True)
@@ -79,7 +81,7 @@ def main():
                     new_ver = new_nm_match_obj.group(2)
                     if nm_to_check == gene['name'][1]:
                         curs.execute(
-                            "UPDATE gene SET nm_version = '{0}' WHERE name[2] = '{}'".format(new_ver, gene['name'][1])
+                            "UPDATE gene SET nm_version = '{0}' WHERE name[2] = '{1}'".format(new_ver, gene['name'][1])
                         )
                     # recheck
                     variant_2 = '{0}.{1}:c.1A>T'.format(gene['name'][1], new_ver)

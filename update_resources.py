@@ -6,15 +6,17 @@ import urllib3
 import certifi
 import requests
 import hashlib
+import time
 
 # connect to a distant resource and check whether or
 # not we should update - and updates
 
 
 def log(level, text):
+    localtime = time.asctime( time.localtime(time.time()) )
     if level == 'ERROR':
-        sys.exit('[{0}]: {1}'.format(level, text))
-    print('[{0}]: {1}'.format(level, text))
+        sys.exit('[{0}]: {1} - {2}'.format(level, localtime, text))
+    print('[{0}]: {1} - {2}'.format(level, localtime, text))
 
 
 def get_last_clinvar_md5_file(resources_dir):
