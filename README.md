@@ -3,7 +3,7 @@
 Utilities for MobiDetails. It is essentially python scripts for MobiDetails administrators. However, one script is designed for the end-user (create_vars_batch.py). See the [wiki](https://github.com/beboche/MDUtils/wiki) for details.
 
 [![Language grade: Python](https://img.shields.io/lgtm/grade/python/g/beboche/MDUtils.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/beboche/MDUtils/context:python)
-[![Language grade: Python](https://img.shields.io/lgtm/grade/python/g/beboche/MDUtils.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/beboche/MDUtils/context:python)
+
 
 ## Installation
 
