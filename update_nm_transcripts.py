@@ -22,7 +22,7 @@ def main():
     # script meant to be croned to update NM acc versions in MD according to VariantValidator
     # to be ran after uta docker update for example
     # uses VV API genes2transcript
-    # https://rest.variantvalidator.org:443/tools/gene2transcripts/{gene_name}
+    # https://rest.variantvalidator.org/VariantValidator/tools/gene2transcripts/NM_130786?content-type=application%2Fjson
     vv_url_base = "https://rest.variantvalidator.org"
     # vv_url_base = "http://0.0.0.0:8000/"
 
@@ -30,7 +30,7 @@ def main():
     curs = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
     curs.execute(  # get genes
-        "SELECT name, nm_version FROM gene ORDER BY name"
+        "SELECT name, nm_version FROM gene ORDER BY name LIMIT 5"
     )
     genes = curs.fetchall()
     count = curs.rowcount
@@ -43,8 +43,8 @@ def main():
             log('INFO', '{0}/{1} isoforms checked'.format(i, count))
         # print("MD------{}".format(gene['name'][1]))
         # get VV info for the gene
-        http = urllib3.PoolManager(cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())
-        vv_url = "{0}/tools/gene2transcripts/{1}?content-type=application/json".format(vv_url_base, gene['name'][1])
+        http = urllib3.PoolManager(cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())       
+        vv_url = "{0}/VariantValidator/tools/gene2transcripts/{1}?content-type=application/json".format(vv_url_base, gene['name'][1])
         # return intervar_url
         try:
             vv_data = json.loads(http.request('GET', vv_url).data.decode('utf-8'))
