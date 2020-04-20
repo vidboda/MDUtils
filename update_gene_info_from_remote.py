@@ -61,7 +61,7 @@ def main():
 
     for gene in no_can:
         req_url = '{0}/api/gene/{1}'.format(remote_addr, gene['hgnc'])
-        api_response = json.loads(http.request('GET', req_url).data.decode('utf-8'))
+        api_response = json.loads(http.request('GET', req_url, headers={'Accept': 'application/json'}).data.decode('utf-8'))
         for keys in api_response:
             if 'canonical' in api_response[keys]:
                 if api_response[keys]['canonical'] is True:
@@ -85,7 +85,7 @@ def main():
         res = curs.fetchall()
         for acc in res:
             req_url = '{0}/api/gene/{1}'.format(remote_addr, acc['name'][0])
-            api_response = json.loads(http.request('GET', req_url).data.decode('utf-8'))
+            api_response = json.loads(http.request('GET', req_url, headers={'Accept': 'application/json'}).data.decode('utf-8'))
             for keys in api_response:
                 if 'canonical' in api_response[keys]:
                     if api_response[keys]['canonical'] is True and acc['canonical'] == 0:
@@ -116,7 +116,7 @@ def main():
         j = 0
         for gene in no_np:
             req_url = '{0}/api/gene/{1}'.format(remote_addr, gene['hgnc'])
-            api_response = json.loads(http.request('GET', req_url).data.decode('utf-8'))
+            api_response = json.loads(http.request('GET', req_url, headers={'Accept': 'application/json'}).data.decode('utf-8'))
             for keys in api_response:
                 if 'RefProtein' in api_response[keys] and api_response[keys]['RefProtein'] != 'NP_000000.0':
                     if re.search(r'NP_\d+\.\d', api_response[keys]['RefProtein']):
@@ -139,7 +139,7 @@ def main():
         o = curs.rowcount
         for gene in res:
             req_url = '{0}/api/gene/{1}'.format(remote_addr, gene['hgnc'])
-            api_response = json.loads(http.request('GET', req_url).data.decode('utf-8'))
+            api_response = json.loads(http.request('GET', req_url, headers={'Accept': 'application/json'}).data.decode('utf-8'))
             l += 1
             if l % 1000 == 0:
                 log('INFO', '{0}/{1} isoforms checked'.format(l, o))

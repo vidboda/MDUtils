@@ -68,7 +68,7 @@ def main():
         variant = '{0}.{1}:c.1A>T'.format(gene['name'][1], gene['nm_version'])
         md_url = '{0}/api/variant/create/{1}/{2}'.format(remote_addr, variant, api_key)
         try:
-            md_response = json.loads(http.request('GET', md_url).data.decode('utf-8'))
+            md_response = json.loads(http.request('GET', md_url, headers={'Accept': 'application/json'}).data.decode('utf-8'))
             if 'mobidetails_error' in md_response:
                 j += 1
                 log('WARNING', 'variant creation failed for gene {0} with error {1}'.format(gene['name'], md_response['mobidetails_error']))
@@ -87,7 +87,7 @@ def main():
                     variant_2 = '{0}.{1}:c.1A>T'.format(gene['name'][1], new_ver)
                     md_url_2 = '{0}/api/variant/create/{1}/{2}'.format(remote_addr, variant_2, api_key)
                     try:
-                        md_response_2 = json.loads(http.request('GET', md_url_2).data.decode('utf-8'))
+                        md_response_2 = json.loads(http.request('GET', md_url_2, headers={'Accept': 'application/json'}).data.decode('utf-8'))
                         if 'mobidetails_id' in md_response_2 and gene['variant_creation'] != 'ok':
                             curs.execute(
                                 "UPDATE gene SET variant_creation = 'ok' WHERE name[2] = '{}'".format(gene['name'][1])

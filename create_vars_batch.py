@@ -79,7 +79,7 @@ def main():
                 log('INFO', 'Submitting variant {0}.{1}:{2} to MobiDetails: {3}'.format(acc_number, acc_version, var, md_url))
 
                 try:
-                    md_response = json.loads(http.request('GET', md_url).data.decode('utf-8'))
+                    md_response = json.loads(http.request('GET', md_url, headers={'Accept': 'application/json'}).data.decode('utf-8'))
                 except Exception:
                     log('WARNING', 'VariantValidator call failed for variant {}'.format(variant))
                     continue
