@@ -103,7 +103,7 @@ def main():
         http = urllib3.PoolManager(cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())
         # get list of remaining genes with no canonical defined
         curs.execute(
-            "SELECT name, np FROM gene WHERE name[1] NOT IN (SELECT name[1] FROM gene WHERE canonical='t') ORDER BY name"
+            "SELECT name, np, canonical FROM gene WHERE name[1] NOT IN (SELECT name[1] FROM gene WHERE canonical='t') ORDER BY name"
         )
         res = curs.fetchall()
         for acc in res:
@@ -137,8 +137,13 @@ def main():
                     acc['name'][1],
                     ncbi_api_key
                 )
+                # log('DEBUG', ncbi_url)
                 eutils_response = http.request('GET', ncbi_url).data.decode('utf-8')
-                if re.search(r'"RefSeq\sSelect"', eutils_response) and acc['canonical'] == 0:
+                # if acc['name'][1] == 'NM_018257':
+                    # log('DEBUG', eutils_response)
+                    # log('DEBUG', acc['canonical'])
+                    # log('DEBUG', re.search(r'"RefSeq\sSelect\scriteria"', eutils_response))
+                if re.search(r'"RefSeq\sSelect\scriteria"', eutils_response) and acc['canonical'] is False:
                     curs.execute(
                         "UPDATE gene SET canonical = 'f' WHERE name[1] = '{}'".format(acc['name'][0])
                     )
