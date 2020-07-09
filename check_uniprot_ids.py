@@ -24,8 +24,8 @@ def log(level, text):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Define a canonical transcript per gene',
-                                     usage='python define_canonical.py [-r path/to/refGeneCanonical_2019_09_23.txt]')
+    parser = argparse.ArgumentParser(description='Update UNIPROT ids and protein size',
+                                     usage='python check_uniprot_ids.py [-k NCBI_API_KEY]')
     parser.add_argument('-k', '--ncbi-api-key', default=None, required=False,
                         help='NCBI Entrez API key. If not provided, 3rd method is not executed')
     args = parser.parse_args()
@@ -43,7 +43,7 @@ def main():
 
     http = urllib3.PoolManager(cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())
     curs.execute(
-        "SELECT name, np, uniprot_id, prot_size FROM gene ORDER BY name"
+        "SELECT name, np, uniprot_id, prot_size FROM gene WHERE ORDER BY name"
     )
     res = curs.fetchall()
     count = curs.rowcount

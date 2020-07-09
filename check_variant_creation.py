@@ -43,10 +43,10 @@ def main():
     db = get_db()
     curs = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
     # get local list of genes with no canonical isoform defined
-    curs.execute(
-        "DELETE FROM variant_feature WHERE c_name = '1A>T'"
-    )
-    db.commit()
+    #curs.execute(
+    #    "DELETE FROM variant_feature WHERE c_name = '1A>T'"
+    #)
+    #db.commit()
 
     http = urllib3.PoolManager(cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())
 

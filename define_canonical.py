@@ -52,78 +52,110 @@ def main():
     # lacking_nm = []
 
     # first when only one isoform => canonical
-
+    log('INFO', "1st Query: genes w/ only one isoform - is automatically canonical")
     curs.execute(
         "SELECT name FROM gene WHERE canonical = 'f' AND name[1] IN (SELECT name[1] FROM gene GROUP BY name[1] HAVING COUNT (name[1]) = 1)"
     )
     res = curs.fetchall()
     for acc in res:
         curs.execute(
-            "UPDATE gene SET canonical = 't' WHERE name[2] = '{}'".format(acc['name'][1])
+            "UPDATE gene SET canonical = 't' WHERE name[2] = %s",
+            (acc['name'][1],)
         )
         # lacking_nm.append(acc['name'][0])
         log('INFO', 'Updated gene {} (1st method)'.format(acc['name'][0]))
         i += 1
     db.commit()
     # second check the refgene file
-
+    log('INFO', "2nd Query: get info from local refGene file")
     for geneLine in open(refgeneFile).readlines():
         # ENST - NM - gene
         geneLineList = geneLine.rstrip().split("\t")
         # print(geneLineList[2])
         if geneLineList[2] != 'n/a' and geneLineList[2] != 'hg38.refGene.name2':
+            # "SELECT DISTINCT(name[1]) FROM gene WHERE name[1] = %s AND name[1] NOT IN (SELECT name[1] FROM gene WHERE canonical = 't') ORDER BY name", - removed -too long
             curs.execute(  # gene exists in MD (no main already set)
-                "SELECT DISTINCT(name[1]) FROM gene WHERE name[1] = '{}' AND name[1] NOT IN \
-                                                                    (SELECT name[1] FROM gene WHERE canonical = 't') ORDER BY name".format(geneLineList[2])
+                "SELECT DISTINCT(name[1]) FROM gene WHERE name[1] = %s ORDER BY name",
+                (geneLineList[2],)
             )
             mdgene = curs.fetchone()
 
             if mdgene is not None:
-                # nm exists in md?
-                curs.execute(
-                    "SELECT name FROM gene WHERE name[2] = '{0}'".format(geneLineList[1])
-                )  # exists in table gene_annotation? get a nm
-                mdnm = curs.fetchone()
-                if mdnm is not None:
-                    # ok => canonical
-                    i += 1
-                    postGene = '{"' + mdnm['name'][0] + '","' + mdnm['name'][1] + '"}'
-                    # print("UPDATE gene SET canonical = 't' WHERE name = '{}'".format(postGene))
+                # is not canonical?
+                curs.execute(  # gene exists in MD (no main already set)
+                    "SELECT canonical FROM gene WHERE name[1] = %s AND canonical = 't'",
+                    (geneLineList[2],)
+                )
+                mdgene_can = curs.fetchone()
+                if mdgene_can is None:
+                    # nm exists in md?
                     curs.execute(
-                         "UPDATE gene SET canonical = 't' WHERE name = '{}'".format(postGene)
-                    )
-                    log('INFO', 'Updated gene {} (2nd method)'.format(mdnm['name'][0]))
+                        "SELECT name FROM gene WHERE name[2] = %s",
+                        (geneLineList[1],)
+                    )  # exists in table gene_annotation? get a nm
+                    mdnm = curs.fetchone()
+                    if mdnm is not None:
+                        # ok => canonical
+                        i += 1
+                        postGene = '{"' + mdnm['name'][0] + '","' + mdnm['name'][1] + '"}'
+                        # print("UPDATE gene SET canonical = 't' WHERE name = '{}'".format(postGene))
+                        curs.execute(
+                             "UPDATE gene SET canonical = 't' WHERE name = %s",
+                             (postGene,)
+                        )
+                        log('INFO', 'Updated gene {} (2nd method)'.format(mdnm['name'][0]))
                 # else:
                     # lacking_nm.append(geneLineList[2])
     # print(lacking_nm)
     db.commit()
+    log('INFO', "3rd Query: get info from NCBI for genes with no canonical defined remaining")
     # 3rd get info at NCBI
     # API key mandatory
-    if ncbi_api_key is not None:
-        http = urllib3.PoolManager(cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())
+    if ncbi_api_key is not None:        
         # get list of remaining genes with no canonical defined
+        # "SELECT name, np, canonical FROM gene WHERE name[1] NOT IN (SELECT name[1] FROM gene WHERE canonical='t') ORDER BY name" - removed, too long
         curs.execute(
-            "SELECT name, np, canonical FROM gene WHERE name[1] NOT IN (SELECT name[1] FROM gene WHERE canonical='t') ORDER BY name"
+            "SELECT name, np, canonical FROM gene ORDER BY name[1], canonical DESC"
         )
         res = curs.fetchall()
+        http = urllib3.PoolManager(cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())
+        semaph_gene = None
         for acc in res:
-            # ncbi
-            ncbi_url = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&id={0}&api_key={1}'.format(acc['name'][1], ncbi_api_key)
-            eutils_response = http.request('GET', ncbi_url).data.decode('utf-8')
-            if re.search(r'"RefSeq\sSelect"', eutils_response):
-                curs.execute(
-                    "UPDATE gene SET canonical = 't' WHERE name[2] = '{}'".format(acc['name'][1])
-                )
-                i += 1
-                log('INFO', 'Updated gene {} (3rd method)'.format(acc['name'][0]))
-            if acc['np'] == 'NP_000000.0':
-                if re.search(r'accession\s"NP_\d+",\s+version\s\d$', eutils_response, re.MULTILINE):
-                    match_object = re.search(r'accession\s"(NP_\d+)",\s+version\s(\d+)$', eutils_response, re.MULTILINE)
+            if semaph_gene != acc['name'][0]:
+                semaph_num_iso = 0
+                semaph_gene = acc['name'][0]
+            semaph_num_iso += 1
+            if semaph_num_iso > 1:
+                continue
+            # check if a canonical has been defined
+            # curs.execute(
+            #     "SELECT name FROM gene WHERE canonical='t' AND name[2] = %s",
+            #     (acc['name'][1],)
+            # )
+            # res_cano = curs.fetchone()
+            # if res_cano is None:
+            if acc['canonical'] == 'f' and \
+                    semaph_num_iso == 1:
+                # ncbi
+                ncbi_url = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&id={0}&api_key={1}'.format(acc['name'][1], ncbi_api_key)
+                eutils_response = http.request('GET', ncbi_url).data.decode('utf-8')
+                if re.search(r'"RefSeq\sSelect"', eutils_response):
                     curs.execute(
-                        "UPDATE gene SET np = '{0}.{1}' WHERE name[2] = '{2}'".format(match_object.group(1), match_object.group(2), acc['name'][1])
+                        "UPDATE gene SET canonical = 't' WHERE name[2] = %s",
+                        (acc['name'][1],)
                     )
-                    log('INFO', 'Updated gene NP acc no of {0} to {1}.{2}'.format(acc['name'][0], match_object.group(1), match_object.group(2)))
+                    i += 1
+                    log('INFO', 'Updated gene {} (3rd method)'.format(acc['name'][0]))
+                if acc['np'] == 'NP_000000.0':
+                    if re.search(r'accession\s"NP_\d+",\s+version\s\d$', eutils_response, re.MULTILINE):
+                        match_object = re.search(r'accession\s"(NP_\d+)",\s+version\s(\d+)$', eutils_response, re.MULTILINE)
+                        curs.execute(
+                            "UPDATE gene SET np = '{0}.{1}' WHERE name[2] = '{2}'".format(match_object.group(1), match_object.group(2), acc['name'][1])
+                        )
+                        log('INFO', 'Updated gene NP acc no of {0} to {1}.{2}'.format(acc['name'][0], match_object.group(1), match_object.group(2)))
+            
         if args.update_refgene:
+            log('INFO', "Update refGene")
             # get genes w/ no variants, and at least 2 isoforms to check which one should be canonical
             curs.execute(
                 "SELECT name, canonical FROM gene WHERE (name[1] NOT IN \
@@ -145,11 +177,13 @@ def main():
                     # log('DEBUG', re.search(r'"RefSeq\sSelect\scriteria"', eutils_response))
                 if re.search(r'"RefSeq\sSelect\scriteria"', eutils_response) and acc['canonical'] is False:
                     curs.execute(
-                        "UPDATE gene SET canonical = 'f' WHERE name[1] = '{}'".format(acc['name'][0])
+                        "UPDATE gene SET canonical = 'f' WHERE name[1] = %s",
+                        (acc['name'][0],)
                     )
                     # log('INFO', "UPDATE gene SET canonical = 'f' WHERE name[1] = '{}'".format(acc['name'][0]))
                     curs.execute(
-                        "UPDATE gene SET canonical = 't' WHERE name[2] = '{}'".format(acc['name'][1])
+                        "UPDATE gene SET canonical = 't' WHERE name[2] = %s",
+                        (acc['name'][1],)
                     )
                     # log('INFO', "UPDATE gene SET canonical = 't' WHERE name[2] = '{}'".format(acc['name'][1]))
                     i += 1
