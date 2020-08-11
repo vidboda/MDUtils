@@ -55,7 +55,7 @@ def main():
     #headers
     header = {
         'Accept': 'application/json',
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.47 Safari/537.36'
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.47 Safari/537.36',
     }
         
     print()
@@ -92,13 +92,19 @@ def main():
                         next
 
                     # md_url = '{0}/api/variant/create/{1}/{2}'.format(md_base_url, variant, api_key)
-                    md_url = '{0}/api/variant/create/{1}.{2}:{3}/{4}'.format(md_base_url, urllib.parse.quote(acc_number), urllib.parse.quote(acc_version), urllib.parse.quote(var), api_key)
+                    # md_url = '{0}/api/variant/create/{1}.{2}:{3}/{4}'.format(md_base_url, urllib.parse.quote(acc_number), urllib.parse.quote(acc_version), urllib.parse.quote(var), api_key)
+                    md_url = '{0}/api/variant/create'.format(md_base_url)
+                    data = {
+                        'variant_chgvs': urllib.parse.quote('{0}.{1}:{2}'.format(acc_number, acc_version, var)),
+                        'api_key': api_key
+                    }
                     log('INFO', 'Submitting variant {0}.{1}:{2} to MobiDetails: {3}'.format(acc_number, acc_version, var, md_url))
     
                     try:
-                        md_response = json.loads(http.request('GET', md_url, headers=header).data.decode('utf-8'))
+                        # md_response = json.loads(http.request('GET', md_url, headers=header).data.decode('utf-8'))
+                        md_response = json.loads(http.request('POST', md_url, headers=header, fields=data).data.decode('utf-8'))
                     except Exception:
-                        log('WARNING', 'VariantValidator call failed for variant {}'.format(variant))
+                        log('WARNING', 'MobiDetails call failed for variant {}'.format(variant))
                         continue
                 elif input_format == 'genomic':
                     g_var = match_obj.group(1)
@@ -114,12 +120,19 @@ def main():
                     except Exception:
                         log('WARNING', 'The gene {} could not be checked for some reason in MobiDetails'.format(gene))
                     if semaph == 'yes':
-                        md_url = '{0}/api/variant/create_g/{1}/{2}/cli/{3}'.format(md_base_url, g_var, gene, api_key)
+                        # md_url = '{0}/api/variant/create_g/{1}/{2}/cli/{3}'.format(md_base_url, g_var, gene, api_key)
+                        md_url = '{0}/api/variant/create_g'.format(md_base_url)
+                        data = {
+                            'variant_ghgvs': g_var,
+                            'gene': gene,
+                            'caller': 'cli',
+                            'api_key': api_key
+                        }
                         log('INFO', 'Submitting variant {0} for gene in {1} to MobiDetails: {2}'.format(g_var, gene, md_url))
                         try:
-                            md_response = json.loads(http.request('GET', md_url, headers=header).data.decode('utf-8'))
+                            md_response = json.loads(http.request('POST', md_url, headers=header, fields=data).data.decode('utf-8'))
                         except Exception:
-                            log('WARNING', 'VariantValidator call failed for genomic variant {}'.format(variant))
+                            log('WARNING', 'MobiDetails call failed for genomic variant {}'.format(variant))
                             continue
                     else:
                         log('WARNING', 'the gene {} is unknown in MobiDetails'.format(gene))
