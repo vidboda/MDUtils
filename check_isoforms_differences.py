@@ -87,13 +87,27 @@ def main():
             elif full_nm not in md_data:
                 log('DEBUG', '{0}-{1}'.format(md_data, full_nm))
             for key in md_data:
-                if re.search('NM_.+', key):
+                matchobj = re.search('^(NM_\d+)\.\d+$', key)
+                if matchobj:
+                    new_nm = matchobj.group(1)
                     if md_data[key]['canonical'] is True:
-                        log('INFO', 'New canonical for {0}: {1} instead of {2}'.format(gene['hgnc'], key, full_nm))
                         diff[gene['hgnc']] = {
                             'old_can': full_nm,
                             'new_can': key
                         }
+                        log('INFO', 'updating canonical for {0}: {1} instead of {2}'.format(gene['hgnc'], key, full_nm))
+                        curs.execute(
+                            "UPDATE gene SET canonical = 'f' WHERE name[1] = %s",
+                            (gene['hgnc'],)
+                        )
+                        curs.execute(
+                            "UPDATE gene SET canonical = 't' WHERE name[2] = %s",
+                            (new_nm,)
+                        )
+                        db.commit()
+                        cmd = "python3 update_vars_when_iso_change.py -k {0} -g {1}".format(api_key, gene['hgnc'])
+                        returned_value = subprocess.call(cmd, shell=True)
+                        log('INFO', 'Variants update returned value for {0}: {1}'.format(gene['hgnc'], returned_value))
         pp = pprint.PrettyPrinter(indent=4)
         pp.pprint(diff)
 

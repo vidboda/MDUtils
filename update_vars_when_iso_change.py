@@ -38,7 +38,7 @@ def compute_start_end_pos(name):
 def main():
     # script meant to update variants when the canonical form of a gene is changed
     parser = argparse.ArgumentParser(description='Define a canonical transcript per gene when several are defined',
-                                     usage='python update_canonical_when_several.py -k ncbi_api_key')
+                                     usage='python update_canonical_when_several.py -k md_api_key -g gene_hgnc')
     parser.add_argument('-k', '--api-key', default='', required=True,
                         help='Your API key visible on your profile page on the website.')
     parser.add_argument('-g', '--gene-name', default='', required=True,
