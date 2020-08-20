@@ -122,7 +122,7 @@ def main():
                         # log('DEBUG', vv_data[first_level_key]['hgvs_predicted_protein_consequence'])
                         if 'tlr' in vv_data[first_level_key]['hgvs_predicted_protein_consequence']:
                             # log('DEBUG', vv_data[first_level_key]['hgvs_predicted_protein_consequence']['tlr'])
-                            match_object = re.search('NP_\d+\.\d.*:p\.\((.+)\)', vv_data[first_level_key]['hgvs_predicted_protein_consequence']['tlr'])
+                            match_object = re.search('NP_\d+\.\d.*:p\.\(?(.+)\)?', vv_data[first_level_key]['hgvs_predicted_protein_consequence']['tlr'])
                             if match_object:
                                 p_name = match_object.group(1)
                             else:
