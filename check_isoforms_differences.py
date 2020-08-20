@@ -1,4 +1,5 @@
 import re
+import sys
 import argparse
 import psycopg2
 import psycopg2.extras
