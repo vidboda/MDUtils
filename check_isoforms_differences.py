@@ -67,7 +67,10 @@ def main():
             "SELECT name[1] AS hgnc, name[2] AS nm, nm_version FROM gene WHERE canonical = 't' AND name[1] IN (SELECT name[1] FROM gene GROUP BY name[1] HAVING COUNT(name[1]) > 1) ORDER by name[1] LIMIT 10"
         )
         res = curs.fetchall()
+        i = 0
         for gene in res:
+            i += 1
+            log('INFO', 'Treating gene {0} - #{1}'.format(gene['hgnc'], i))
             full_nm = '{0}.{1}'.format(gene['nm'], gene['nm_version'])
             base_url = "http://10.34.20.79"
             md_url = '{0}/MD/api/gene/{1}'.format(base_url, gene['hgnc'])
@@ -78,7 +81,7 @@ def main():
                 log('WARNING', 'MD not responding for {}'.format(gene['hgnc']))
             if full_nm in md_data and \
                     md_data[full_nm]['canonical'] is True:
-                log('INFO', 'No change for {}'.format(gene['hgnc']))
+                # log('INFO', 'No change for {}'.format(gene['hgnc']))
                 continue
             else:
                 log('DEBUG', '{0}-{1}'.format(md_data, full_nm))
