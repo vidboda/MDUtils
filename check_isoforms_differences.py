@@ -9,6 +9,7 @@ import time
 import datetime
 import json
 import pprint
+import subprocess
 from insert_genes import get_db
 # requires MobiDetails config module + database.ini file
 from MobiDetailsApp import config
