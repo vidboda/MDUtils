@@ -62,8 +62,9 @@ def main():
     if args.diff_md:
         # meant to be ran on prod server
         diff = {}
+        # get genes w/ more than one isoform
         curs.execute(
-            "SELECT name[1] AS hgnc, name[2] AS nm, nm_version FROM gene WHERE canonical = 't'"
+            "SELECT name[1] AS hgnc, name[2] AS nm, nm_version FROM gene WHERE canonical = 't' AND name[1] IN (SELECT name[1] FROM gene GROUP BY name[1] HAVING COUNT(name[1]) > 1) ORDER by name[1] LIMIT 10"
         )
         res = curs.fetchall()
         for gene in res:
@@ -75,9 +76,12 @@ def main():
                 md_data = json.loads(http.request('GET', md_url).data.decode('utf-8'))
             except Exception:
                 log('WARNING', 'MD not responding for {}'.format(gene['hgnc']))
-            if md_data[full_nm]['canonical'] is True:
+            if full_nm in md_data and \
+                    md_data[full_nm]['canonical'] is True:
                 log('INFO', 'No change for {}'.format(gene['hgnc']))
                 continue
+            else:
+                log('DEBUG', '{0}-{1}'.format(md_data, full_nm))
             for key in md_data:
                 if re.search('NM_.+', key):
                     if md_data[key]['canonical'] is True:
