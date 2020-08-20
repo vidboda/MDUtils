@@ -83,7 +83,7 @@ def main():
                     md_data[full_nm]['canonical'] is True:
                 # log('INFO', 'No change for {}'.format(gene['hgnc']))
                 continue
-            else:
+            elif full_nm not in md_data:
                 log('DEBUG', '{0}-{1}'.format(md_data, full_nm))
             for key in md_data:
                 if re.search('NM_.+', key):
