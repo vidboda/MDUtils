@@ -64,7 +64,7 @@ def main():
         diff = {}
         # get genes w/ more than one isoform
         curs.execute(
-            "SELECT name[1] AS hgnc, name[2] AS nm, nm_version FROM gene WHERE canonical = 't' AND name[1] IN (SELECT name[1] FROM gene GROUP BY name[1] HAVING COUNT(name[1]) > 1) ORDER by name[1] LIMIT 10"
+            "SELECT name[1] AS hgnc, name[2] AS nm, nm_version FROM gene WHERE canonical = 't' AND name[1] IN (SELECT name[1] FROM gene GROUP BY name[1] HAVING COUNT(name[1]) > 1) ORDER by name[1]"
         )
         res = curs.fetchall()
         i = 0
