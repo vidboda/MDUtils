@@ -1,8 +1,8 @@
-# import sys
 # from os import listdir
 # from os.path import isfile, join
 # import os
 import re
+import sys
 import argparse
 import psycopg2
 import psycopg2.extras
@@ -39,7 +39,7 @@ def main():
     args = parser.parse_args()
     if args.ncbi_api_key is not None:
         if not re.search(r'\w+', args.ncbi_api_key):
-            sys.exit('ERROR: Invalid NCBI API key, please check')
+            log('ERROR: Invalid NCBI API key, please check')
         else:
             ncbi_api_key = args.ncbi_api_key
     # get db connector and cursor

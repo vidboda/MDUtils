@@ -64,7 +64,7 @@ def main():
     parser.add_argument('-c', '--clinvar', default='', required=False,
                         help='Optionally updates clinvar vcf', action='store_true')
     parser.add_argument('-d', '--dbsnp', default='', required=False,
-                        help='Optionally updates dbsnp vcf')
+                        help='Optionally updates dbsnp vcf', action='store_true')
     parser.add_argument('-ip', '--prod-ip', default='194.167.35.207', required=False,
                         help='Production server IP for rsync copy')
     args = parser.parse_args()

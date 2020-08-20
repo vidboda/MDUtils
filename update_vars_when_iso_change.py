@@ -1,4 +1,5 @@
 import re
+import sys
 import argparse
 import psycopg2
 import psycopg2.extras
@@ -59,7 +60,7 @@ def main():
         if res_user is None:
             log('ERROR', 'Unknown API key')
         username = res_user['username']
-        log('DEBUG', 'User: {}'.format(username))
+        log('INFO', 'User: {}'.format(username))
     match_obj = re.search('^([\w-]+)$', args.gene_name)
     if match_obj:
         gene_name = match_obj.group(1)

@@ -69,6 +69,5 @@ def main():
         except Exception:
             log('WARNING', 'No value for {0}'.format(gene['name'][0]))
 
-
 if __name__ == '__main__':
     main()
