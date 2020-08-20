@@ -229,7 +229,7 @@ def main():
                         )
                     else:
                         curs.execute(
-                            "UPDATE variant_feature SET gene_name[2] = %s, c_name = %s, p_name = %s, ivs_nam, start_segment_type = %s, \
+                            "UPDATE variant_feature SET gene_name[2] = %s, c_name = %s, p_name = %s, ivs_name = %s, start_segment_type = %s, \
                             start_segment_number = %s, end_segment_type = %s, end_segment_number = %s, \
                             creation_date = %s WHERE id = %s",
                             (nm, new_c_name, p_name, ivs_name, start_segment_type, start_segment_number, end_segment_type, end_segment_number, creation_date, var['id'])
