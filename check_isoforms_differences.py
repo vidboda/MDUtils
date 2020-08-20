@@ -8,6 +8,7 @@ import certifi
 import time
 import datetime
 import json
+import pprint
 from insert_genes import get_db
 # requires MobiDetails config module + database.ini file
 from MobiDetailsApp import config
@@ -93,7 +94,8 @@ def main():
                             'old_can': full_nm,
                             'new_can': key
                         }
-        print(diff)
+        pp = pprint.PrettyPrinter(indent=4)
+        pp.pprint(diff)
 
 if __name__ == '__main__':
     main()
