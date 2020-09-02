@@ -4,12 +4,13 @@ import argparse
 import psycopg2
 import psycopg2.extras
 import urllib3
+import urllib
 import certifi
 import json
 import time
 from insert_genes import get_db
 # requires MobiDetails config module + database.ini file
-from MobiDetailsApp import config
+from MobiDetailsApp import config, md_utilities
 
 # removes all c.1A>T then checks that these variants can be created in genes using API
 # to be used on private dev server
@@ -42,11 +43,10 @@ def main():
     # get db connector and cursor
     db = get_db()
     curs = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
-    # get local list of genes with no canonical isoform defined
-    #curs.execute(
-    #    "DELETE FROM variant_feature WHERE c_name = '1A>T'"
-    #)
-    #db.commit()
+    curs.execute(
+       "DELETE FROM variant_feature WHERE c_name = '1A>T'"
+    )
+    db.commit()
 
     http = urllib3.PoolManager(cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())
 
@@ -66,9 +66,18 @@ def main():
         if i % 500 == 0:
             log('INFO', '{0}/{1} genes checked'.format(i, num_can))
         variant = '{0}.{1}:c.1A>T'.format(gene['name'][1], gene['nm_version'])
-        md_url = '{0}/api/variant/create/{1}/{2}'.format(remote_addr, variant, api_key)
+        # md_url = '{0}/api/variant/create/{1}/{2}'.format(remote_addr, variant, api_key)
+        md_url = '{0}/api/variant/create'.format(remote_addr)
+        variant_chgvs = '{0}.{1}:c.1A>T'.format(gene['name'][1], gene['nm_version'])
+        data = {
+            'variant_chgvs': urllib.parse.quote(variant_chgvs),
+            'caller': 'cli',
+            'api_key': api_key
+        }
         try:
-            md_response = json.loads(http.request('GET', md_url, headers={'Accept': 'application/json'}).data.decode('utf-8'))
+            md_response = json.loads(http.request('POST', md_url, headers=md_utilities.api_fake_agent, fields=data).data.decode('utf-8'))
+        # try:
+        #     md_response = json.loads(http.request('GET', md_url, headers={'Accept': 'application/json'}).data.decode('utf-8'))
             if 'mobidetails_error' in md_response:
                 j += 1
                 log('WARNING', 'variant creation failed for gene {0} with error {1}'.format(gene['name'], md_response['mobidetails_error']))
@@ -84,10 +93,11 @@ def main():
                             "UPDATE gene SET nm_version = '{0}' WHERE name[2] = '{1}'".format(new_ver, gene['name'][1])
                         )
                     # recheck
-                    variant_2 = '{0}.{1}:c.1A>T'.format(gene['name'][1], new_ver)
-                    md_url_2 = '{0}/api/variant/create/{1}/{2}'.format(remote_addr, variant_2, api_key)
+                    data['variant_chgvs'] = '{0}.{1}:c.1A>T'.format(gene['name'][1], new_ver)
+                    # md_url_2 = '{0}/api/variant/create/{1}/{2}'.format(remote_addr, variant_2, api_key)
                     try:
-                        md_response_2 = json.loads(http.request('GET', md_url_2, headers={'Accept': 'application/json'}).data.decode('utf-8'))
+                        md_response_2 = json.loads(http.request('POST', md_url, headers=md_utilities.api_fake_agent, fields=data).data.decode('utf-8'))
+                        # md_response_2 = json.loads(http.request('GET', md_url_2, headers={'Accept': 'application/json'}).data.decode('utf-8'))
                         if 'mobidetails_id' in md_response_2 and gene['variant_creation'] != 'ok':
                             curs.execute(
                                 "UPDATE gene SET variant_creation = 'ok' WHERE name[2] = '{}'".format(gene['name'][1])
