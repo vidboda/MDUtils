@@ -74,7 +74,8 @@ def main():
                         match_obj = re.search(r'(NM_\d+)\.\d', keys)
                         nm_acc = match_obj.group(1)
                         curs.execute(
-                            "UPDATE gene set canonical = 't' WHERE name[2] = '{}'".format(nm_acc)
+                            "UPDATE gene set canonical = 't' WHERE name[2] = %s",
+                            (nm_acc,)
                         )
                         log('INFO', 'Updating {}'.format(nm_acc))
                         i += 1
@@ -100,11 +101,13 @@ def main():
                             # double check
                             if nm_acc == acc['name'][1]:
                                 curs.execute(
-                                    "UPDATE gene SET canonical = 'f' WHERE name[1] = '{}'".format(acc['name'][0])
+                                    "UPDATE gene SET canonical = 'f' WHERE name[1] = %s",
+                                    (acc['name'][0],)
                                 )
                                 # log('INFO', "UPDATE gene SET canonical = 'f' WHERE name[1] = '{}'".format(acc['name'][0]))
                                 curs.execute(
-                                    "UPDATE gene SET canonical = 't' WHERE name[2] = '{}'".format(acc['name'][1])
+                                    "UPDATE gene SET canonical = 't' WHERE name[2] = %s",
+                                    (acc['name'][1],)
                                 )
                                 # log('INFO', "UPDATE gene SET canonical = 't' WHERE name[2] = '{}'".format(acc['name'][1]))
                                 i += 1
@@ -129,7 +132,8 @@ def main():
                         nm_acc = match_obj.group(1)
                         np_acc = api_response[keys]['RefProtein']
                         curs.execute(
-                            "UPDATE gene set np = '{0}' WHERE name[2] = '{1}'".format(np_acc, nm_acc)
+                            "UPDATE gene set np = %s WHERE name[2] = %s",
+                            (np_acc, nm_acc)
                         )
                         log('INFO', 'Updating gene NP acc no of {0} to {1}'.format(nm_acc, np_acc))
                         j += 1
@@ -156,18 +160,20 @@ def main():
                     if nm_acc == gene['nm']:
                         if args.update_nm:
                             nm_version = match_obj.group(2)
-                            if int(nm_version) > gene['nm_version']:
-                                # no downgrade?
+                            if int(nm_version) != int(gene['nm_version']):
+                                # no downgrade? y => downgrade
                                 curs.execute(
-                                    "UPDATE gene set nm_version = '{0}' WHERE name[2] = '{1}'".format(nm_version, nm_acc)
+                                    "UPDATE gene set nm_version = %s WHERE name[2] = %s",
+                                    (nm_version, nm_acc)
                                 )
-                                log('INFO', 'Updating gene RefSeq NM accession version of {0} to {1}'.format(nm_acc, nm_version))
+                                log('INFO', 'Updating gene RefSeq NM accession version of {0} from {1} to {2}'.format(nm_acc, gene['nm_version'], nm_version))
                                 n += 1
                         if 'UNIPROT' in api_response[keys] and args.update_uniprot:
                             uniprot = api_response[keys]['UNIPROT']
                             if uniprot != gene['uniprot_id']:
                                 curs.execute(
-                                    "UPDATE gene set uniprot_id = '{0}' WHERE name[2] = '{1}'".format(uniprot, nm_acc)
+                                    "UPDATE gene set uniprot_id = %s WHERE name[2] = %s",
+                                    (uniprot, nm_acc)
                                 )
                                 log('INFO', 'Updating gene UNIPROT id of {0} to {1}'.format(nm_acc, uniprot))
                                 k += 1
@@ -175,14 +181,15 @@ def main():
                             tag = api_response[keys]['variantCreationTag']
                             if tag != gene['variant_creation']:
                                 curs.execute(
-                                    "UPDATE gene set variant_creation = '{0}' WHERE name[2] = '{1}'".format(tag, nm_acc)
+                                    "UPDATE gene set variant_creation = %s WHERE name[2] = %s",
+                                    (tag, nm_acc)
                                 )
                                 log('INFO', 'Updating gene variantCreationTag of {0} to {1}'.format(nm_acc, tag))
                                 m += 1
         db.commit()
         log('INFO', '{} UNIPROT IDs modified'.format(k))
-        log('INFO', '[INFO]: {} variantCreationTag modified'.format(m))
-        log('INFO', '[INFO]: {} RefSeq NM accession version modified'.format(n))
+        log('INFO', '{} variantCreationTag modified'.format(m))
+        log('INFO', '{} RefSeq NM accession version modified'.format(n))
 
 
 if __name__ == '__main__':

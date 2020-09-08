@@ -22,7 +22,6 @@ def log(level, text):
     print('[{0}]: {1} - {2}'.format(level, localtime, text))
 
 def main():
-    # script meant to update variants when the canonical form of a gene is changed
     parser = argparse.ArgumentParser(description='Define a canonical transcript per gene when several are defined',
                                      usage='python check_isoforms_differences.py -k md_api_key -nk ncbi_api_key')
     parser.add_argument('-k', '--api-key', default=None, required=True,
