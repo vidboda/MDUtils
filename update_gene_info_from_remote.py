@@ -114,7 +114,7 @@ def main():
                                 log('INFO', 'Updated gene {}'.format(acc['name'][0]))
         db.commit()
 
-    log('INFO', '{} genes modified (canonical all)'.format(i))
+        log('INFO', '{} genes modified (canonical all)'.format(i))
 
     if args.update_np:
         curs.execute(
@@ -153,7 +153,7 @@ def main():
             if l % 1000 == 0:
                 log('INFO', '{0}/{1} isoforms checked'.format(l, o))
             for keys in api_response:
-                match_obj = re.search(r'(NM_\d+)\.(\d)', keys)
+                match_obj = re.search(r'(NM_\d+)\.(\d+)', keys)
                 if match_obj:
                     nm_acc = match_obj.group(1)
                     # check again
