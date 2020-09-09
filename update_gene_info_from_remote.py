@@ -141,7 +141,7 @@ def main():
         log('INFO', '{} NP acc no modified'.format(j))
     if args.update_uniprot or args.update_creation or args.update_nm:
         curs.execute(
-            "SELECT  name[1] as HGNC, name[2] as nm, nm_version, np, uniprot_id, variant_creation FROM gene ORDER BY name"
+            "SELECT  name[1] as HGNC, name[2] as nm, nm_version, np, uniprot_id, variant_creation FROM gene ORDER BY name LIMIT 100"
         )
         res = curs.fetchall()
         k = l = m = n = 0
@@ -153,13 +153,14 @@ def main():
             if l % 1000 == 0:
                 log('INFO', '{0}/{1} isoforms checked'.format(l, o))
             for keys in api_response:
-                match_obj = re.search(r'(NM_\d+)\.(\d+)', keys)
+                match_obj = re.search(r'^(NM_\d+)\.(\d+)$', keys)
                 if match_obj:
                     nm_acc = match_obj.group(1)
                     # check again
                     if nm_acc == gene['nm']:
                         if args.update_nm:
                             nm_version = match_obj.group(2)
+                            log('DEBUG', '{0}dev:{1}-prod:{2}'.format(gene['hgnc'], int(nm_version), int(gene['nm_version'])))
                             if int(nm_version) != int(gene['nm_version']):
                                 # no downgrade? y => downgrade
                                 curs.execute(
