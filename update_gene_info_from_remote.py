@@ -141,7 +141,7 @@ def main():
         log('INFO', '{} NP acc no modified'.format(j))
     if args.update_uniprot or args.update_creation or args.update_nm:
         curs.execute(
-            "SELECT  name[1] as HGNC, name[2] as nm, nm_version, np, uniprot_id, variant_creation FROM gene ORDER BY name LIMIT 200"
+            "SELECT  name[1] as HGNC, name[2] as nm, nm_version, np, uniprot_id, variant_creation FROM gene ORDER BY name"
         )
         res = curs.fetchall()
         k = l = m = n = 0
@@ -160,7 +160,7 @@ def main():
                     if nm_acc == gene['nm']:
                         if args.update_nm:
                             nm_version = match_obj.group(2)
-                            log('DEBUG', '{0}dev:{1}-prod:{2}'.format(gene['hgnc'], int(nm_version), int(gene['nm_version'])))
+                            # log('DEBUG', '{0}dev:{1}-prod:{2}'.format(gene['hgnc'], int(nm_version), int(gene['nm_version'])))
                             if int(nm_version) != int(gene['nm_version']):
                                 # no downgrade? y => downgrade
                                 curs.execute(
