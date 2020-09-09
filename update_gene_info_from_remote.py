@@ -141,7 +141,7 @@ def main():
         log('INFO', '{} NP acc no modified'.format(j))
     if args.update_uniprot or args.update_creation or args.update_nm:
         curs.execute(
-            "SELECT  name[1] as HGNC, name[2] as nm, nm_version, np, uniprot_id, variant_creation FROM gene ORDER BY name LIMIT 100"
+            "SELECT  name[1] as HGNC, name[2] as nm, nm_version, np, uniprot_id, variant_creation FROM gene ORDER BY name LIMIT 200"
         )
         res = curs.fetchall()
         k = l = m = n = 0
