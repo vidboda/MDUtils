@@ -31,7 +31,7 @@ def main():
     curs = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
     curs.execute(  # get genes
-        "SELECT name, nm_version FROM gene WHERE canonical = 't' AND name[1] ~'^R[HIM]\w+'ORDER BY name"
+        "SELECT name, nm_version FROM gene WHERE canonical = 't' ORDER BY name"
     )
     genes = curs.fetchall()
     count = curs.rowcount
