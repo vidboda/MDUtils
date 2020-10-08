@@ -70,7 +70,8 @@ def main():
                 # log('DEBUG', eutils_response)
                     # log('DEBUG', acc['canonical'])
                     # log('DEBUG', re.search(r'"RefSeq\sSelect\scriteria"', eutils_response))
-                if re.search(r'"RefSeq\sSelect\scriteria"', eutils_response):
+                if re.search(r'"RefSeq\sSelect\scriteria"', eutils_response) and \
+                        acc['variant_creation'] == 'ok':
                     curs.execute(
                         "UPDATE gene SET canonical = 'f' WHERE name[1] = %s",
                         (acc['name'][0],)
