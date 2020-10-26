@@ -67,11 +67,15 @@ def main():
     for gene in no_can:
         req_url = '{0}/api/gene/{1}'.format(remote_addr, gene['hgnc'])
         api_response = json.loads(http.request('GET', req_url, headers=header).data.decode('utf-8'))
+        log('DEBUG', 'req_url:{0}'.format(req_url))
+        # log('DEBUG', 'api_response:{0}'.format(api_response))
         for keys in api_response:
-            if 'canonical' in api_response[keys]:
+            # log('DEBUG', 'key:{0} - value:{1}'.format(keys, api_response[keys]))
+            if isinstance(keys, dict) and \
+                    'canonical' in api_response[keys]:
                 if api_response[keys]['canonical'] is True:
-                    if re.search(r'NM_\d+\.\d', keys):
-                        match_obj = re.search(r'(NM_\d+)\.\d', keys)
+                    if re.search(r'NM_\d+\.\d+', keys):
+                        match_obj = re.search(r'(NM_\d+)\.\d+', keys)
                         nm_acc = match_obj.group(1)
                         curs.execute(
                             "UPDATE gene set canonical = 't' WHERE name[2] = %s",
@@ -93,10 +97,11 @@ def main():
             req_url = '{0}/api/gene/{1}'.format(remote_addr, acc['name'][0])
             api_response = json.loads(http.request('GET', req_url, headers=header).data.decode('utf-8'))
             for keys in api_response:
-                if 'canonical' in api_response[keys]:
+                 if isinstance(keys, dict) and \
+                        'canonical' in api_response[keys]:
                     if api_response[keys]['canonical'] is True and acc['canonical'] == 0:
-                        if re.search(r'NM_\d+\.\d', keys):
-                            match_obj = re.search(r'(NM_\d+)\.\d', keys)
+                        if re.search(r'NM_\d+\.\d+', keys):
+                            match_obj = re.search(r'(NM_\d+)\.\d+', keys)
                             nm_acc = match_obj.group(1)
                             # double check
                             if nm_acc == acc['name'][1]:
@@ -126,17 +131,19 @@ def main():
             req_url = '{0}/api/gene/{1}'.format(remote_addr, gene['hgnc'])
             api_response = json.loads(http.request('GET', req_url, headers=header).data.decode('utf-8'))
             for keys in api_response:
-                if 'RefProtein' in api_response[keys] and api_response[keys]['RefProtein'] != 'NP_000000.0':
-                    if re.search(r'NP_\d+\.\d', api_response[keys]['RefProtein']):
-                        match_obj = re.search(r'(NM_\d+)\.\d', keys)
-                        nm_acc = match_obj.group(1)
-                        np_acc = api_response[keys]['RefProtein']
-                        curs.execute(
-                            "UPDATE gene set np = %s WHERE name[2] = %s",
-                            (np_acc, nm_acc)
-                        )
-                        log('INFO', 'Updating gene NP acc no of {0} to {1}'.format(nm_acc, np_acc))
-                        j += 1
+                if isinstance(keys, dict):
+                    if 'RefProtein' in api_response[keys] and \
+                            api_response[keys]['RefProtein'] != 'NP_000000.0':
+                        if re.search(r'NP_\d+\.\d+', api_response[keys]['RefProtein']):
+                            match_obj = re.search(r'(NM_\d+)\.\d+', keys)
+                            nm_acc = match_obj.group(1)
+                            np_acc = api_response[keys]['RefProtein']
+                            curs.execute(
+                                "UPDATE gene set np = %s WHERE name[2] = %s",
+                                (np_acc, nm_acc)
+                            )
+                            log('INFO', 'Updating gene NP acc no of {0} to {1}'.format(nm_acc, np_acc))
+                            j += 1
         db.commit()
         log('INFO', '{} NP acc no modified'.format(j))
     if args.update_uniprot or args.update_creation or args.update_nm:

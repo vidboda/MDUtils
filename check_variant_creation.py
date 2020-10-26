@@ -82,7 +82,7 @@ def main():
                 j += 1
                 log('WARNING', 'variant creation failed for gene {0} with error {1}'.format(gene['name'], md_response['mobidetails_error']))
                 new_nm_match_obj = re.search(
-                    r'A more recent version of the selected reference sequence NM_\d+\.\d is available \((NM_\d+)\.(\d)\)',
+                    r'A more recent version of the selected reference sequence NM_\d+\.\d+ is available \((NM_\d+)\.(\d+)\)',
                     md_response['mobidetails_error']
                 )
                 if new_nm_match_obj:

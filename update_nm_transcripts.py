@@ -60,24 +60,6 @@ def main():
                     nm_acc = match_object.group(1)
                     # if nm_acc == gene['name'][1]:
                     nm_version = match_object.group(2)
-                    # if VV nm_version > current_nm
-                    # => update and next
-                    # if VV nm_version < current_nm
-                    # 2 possibilities
-                    # - update needed (MD too high)
-                    # - update not needed => current_nm will arrive next
-                    # so we need to keep in memory the preceeding nm_version and decide whether or not we have to update
-                    # if nm_acc == gene['name'][1]:
-                    #     if int(nm_version) > int(current_nm):
-                    #         # print("IN--{}-{}-{}-{}-{}-".format(vv_data['current_symbol'],
-                    #         #   transcript['reference'], gene['name'][1], nm_version, current_nm))
-                    #         curs.execute(
-                    #             "UPDATE gene SET nm_version = '{0}' WHERE name[2] = '{1}'".format(nm_version, gene['name'][1])
-                    #         )
-                    #         db.commit()
-                    #         current_nm = nm_version
-                    #         log('INFO', "NM INCREASE: gene {0} - {1} increases from {2} to {3}".format(gene['name'][0], gene['name'][1], current_nm, nm_version))
-                        #  elif int(nm_version) < int(current_nm):
                     if nm_acc not in ts_dict:
                         ts_dict[nm_acc] = [nm_version]
                     else:
@@ -95,13 +77,31 @@ def main():
                     continue
                 # log("DEBUG", "Gene: {0} - NM: {1} - VV Max NM: {2} - MD Current NM: {3}".format(gene['name'][0], nm, max_vv_nm, res_nm[0]))
                 if res_nm and \
-                        int(res_nm[0]) != int(max_vv_nm):                    
+                        int(res_nm[0]) != int(max_vv_nm):
+                    # NEED TO TEST IF THE TRANSCIPT WORKS!!!!!
+                    vv_url_var = "{0}/VariantValidator/variantvalidator/GRCh38/{1}.{2}:c.1A>T/all?content-type=application/json".format(vv_url_base, gene, max_vv_nm)
+                    log('DEBUG', 'Calling VariantValidator API: {}'.format(vv_url))
+                    try:
+                        vv_data = json.loads(http.request('GET', vv_url_var).data.decode('utf-8'))
+                        # log('DEBUG', vv_data)
+                    except Exception:
+                            log('WARNING', 'No VV result for {0}.{1}'.format(gene, max_vv_nm))
+                            continue
+                    for first_level_key in vv_data:
+                        if 'validation_warnings' in vv_data[first_level_key]:
+                            for warning in vv_data[first_level_key]['validation_warnings']:
+                                if re.search(r'cannot be mapped directly to genome build') or \
+                                        re.search(r'No transcript definition for') or \
+                                        re.search(r'No transcripts found') or \
+                                        re.search(r'expected one of'):
+                                    log('WARNING', "Cannot update gene {0} from {1} to {2} because of {1}".format(gene, res_nm[0], max_vv_nm, warning))
+                                    break
                     curs.execute(
                         "UPDATE gene SET nm_version = %s WHERE name[2] = %s",
                         (max_vv_nm, nm)
                     )
                     log('INFO', "NM UPDATE: gene {0} - {1} modified from {2} to {3}".format(gene['name'][0], nm, res_nm[0], max_vv_nm))
-                db.commit()
+                # db.commit()
 
         print('.', end="", flush=True)
 if __name__ == '__main__':
