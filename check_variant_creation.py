@@ -75,7 +75,7 @@ def main():
             'api_key': api_key
         }
         try:
-            md_response = json.loads(http.request('POST', md_url, headers=md_utilities.api_fake_agent, fields=data).data.decode('utf-8'))
+            md_response = json.loads(http.request('POST', md_url, headers=md_utilities.api_agent, fields=data).data.decode('utf-8'))
         # try:
         #     md_response = json.loads(http.request('GET', md_url, headers={'Accept': 'application/json'}).data.decode('utf-8'))
             if 'mobidetails_error' in md_response:
@@ -96,7 +96,7 @@ def main():
                     data['variant_chgvs'] = '{0}.{1}:c.1A>T'.format(gene['name'][1], new_ver)
                     # md_url_2 = '{0}/api/variant/create/{1}/{2}'.format(remote_addr, variant_2, api_key)
                     try:
-                        md_response_2 = json.loads(http.request('POST', md_url, headers=md_utilities.api_fake_agent, fields=data).data.decode('utf-8'))
+                        md_response_2 = json.loads(http.request('POST', md_url, headers=md_utilities.api_agent, fields=data).data.decode('utf-8'))
                         # md_response_2 = json.loads(http.request('GET', md_url_2, headers={'Accept': 'application/json'}).data.decode('utf-8'))
                         if 'mobidetails_id' in md_response_2 and gene['variant_creation'] != 'ok':
                             curs.execute(
@@ -123,6 +123,7 @@ def main():
                 )
             db.commit()
         except Exception:
+            log('ERROR', 'failed MD API call {}'.format(md_url))
             k += 1
             failed_genes.append('{}'.format(gene['name'][0]))
             continue
