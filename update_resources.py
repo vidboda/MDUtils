@@ -257,8 +257,8 @@ def main():
             if match_obj:
                 dbsnp_version = match_obj.group(1)
                 log('INFO', 'dbSNP version file found: v{0}'.format(dbsnp_version))
-                if not os.path.exists('{0}/dbsnp/v{1}'.format(resources_path, dbsnp_version)):
-                    os.makedirs('{0}/dbsnp/v{1}'.format(resources_path, dbsnp_version))
+                if not os.path.exists('{0}/dbsnp/hg38/v{1}'.format(resources_path, dbsnp_version)):
+                    os.makedirs('{0}/dbsnp/hg38/v{1}'.format(resources_path, dbsnp_version))
                 else:
                     log('INFO', 'dbSNP version file found: v{0} same as current'.format(dbsnp_version))
                     semaph = 1

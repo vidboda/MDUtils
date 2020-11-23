@@ -22,7 +22,7 @@ def log(level, text):
     print('[{0}]: {1} - {2}'.format(level, localtime, text))
 
 def main():
-    parser = argparse.ArgumentParser(description='Define a canonical transcript per gene when several are defined',
+    parser = argparse.ArgumentParser(description='Check isoforms differences between 2 DBs',
                                      usage='python check_isoforms_differences.py -k md_api_key -nk ncbi_api_key')
     parser.add_argument('-k', '--api-key', default=None, required=True,
                         help='Your API key visible on your profile page on the website.')
@@ -87,7 +87,7 @@ def main():
             elif full_nm not in md_data:
                 log('DEBUG', '{0}-{1}'.format(md_data, full_nm))
             for key in md_data:
-                matchobj = re.search('^(NM_\d+)\.\d+$', key)
+                matchobj = re.search(r'^(NM_\d+)\.\d+$', key)
                 if matchobj:
                     new_nm = matchobj.group(1)
                     if md_data[key]['canonical'] is True:
