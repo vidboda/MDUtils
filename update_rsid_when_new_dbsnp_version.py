@@ -31,8 +31,8 @@ def main():
         db = get_db()
         curs = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
         curs.execute(
-            "SELECT a.id, b.pos, b.pos_ref, b.pos_alt, c.ncbi_name FROM variant_feature a, variant b, chromosomes c WHERE a.id = b.feature_id AND b.chr = c.name AND c.genome_version = 'hg38' AND b.genome_version = 'hg38' ORDER BY a.id"
-        ) #  AND a.dbsnp_id is NULL
+            "SELECT a.id, b.pos, b.pos_ref, b.pos_alt, c.ncbi_name FROM variant_feature a, variant b, chromosomes c WHERE a.id = b.feature_id AND b.chr = c.name AND c.genome_version = 'hg38' AND b.genome_version = 'hg38' AND a.dbsnp_id is NULL ORDER BY a.id"
+        )
         res = curs.fetchall()
         count = curs.rowcount
         log('INFO', 'Found {0} variants to check'.format(count))
