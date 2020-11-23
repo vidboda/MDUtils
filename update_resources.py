@@ -19,18 +19,34 @@ def log(level, text):
     print('[{0}]: {1} - {2}'.format(level, localtime, text))
 
 
-def get_last_clinvar_md5_file(resources_dir):
-    files = os.listdir(resources_dir)
+# def get_last_clinvar_md5_file(resources_dir):
+#     files = os.listdir(resources_dir)
+#     dates = []
+#     for current_file in files:
+#         # print(current_file)
+#         match_obj = re.search(r'clinvar_(\d+).vcf.gz.md5$', current_file)
+#         if match_obj:
+#             dates.append(match_obj.group(1))
+#     current_clinvar = '{0}clinvar_{1}.vcf.gz.md5'.format(resources_dir, max(dates))
+#     with open(current_clinvar, 'r') as clinvar_file:
+#         # print(clinvar_file.read())
+#         match_obj = re.search(r'^(\w+)\s', clinvar_file.read())
+#         if match_obj:
+#             return match_obj.group(1)
+#     return 'f'
+
+def get_last_md5_file(resource_dir, resource_type, resource_regexp, target_suffix):
+    files = os.listdir(resource_dir)
     dates = []
     for current_file in files:
         # print(current_file)
-        match_obj = re.search(r'clinvar_(\d+).vcf.gz.md5$', current_file)
+        match_obj = re.search(rf'{resource_regexp}{target_suffix}.gz.md5$', current_file)
         if match_obj:
             dates.append(match_obj.group(1))
-    current_clinvar = '{0}clinvar_{1}.vcf.gz.md5'.format(resources_dir, max(dates))
-    with open(current_clinvar, 'r') as clinvar_file:
+    current_resource = '{0}{1}_{2}{3}.gz.md5'.format(resource_dir, resource_type, max(dates), target_suffix)
+    with open(current_resource, 'r') as current_file:
         # print(clinvar_file.read())
-        match_obj = re.search(r'^(\w+)\s', clinvar_file.read())
+        match_obj = re.search(r'^(\w+)\s', current_file.read())
         if match_obj:
             return match_obj.group(1)
     return 'f'
@@ -42,18 +58,98 @@ def download_file_from_server_endpoint(server_endpoint, local_file_path):
     # Send HTTP GET request to server and attempt to receive a response
     response = requests.get(server_endpoint)
     # If the HTTP GET request can be served
+    # log('DEBUG', response.status_code)
     if response.status_code == 200:
         # Write the file contents in the response to a file specified by local_file_path
         try:
-            log('INFO', 'Downloading Clinvar file as {}'.format(local_file_path))
+            log('INFO', 'Downloading file as {}'.format(local_file_path))
             with open(local_file_path, 'wb') as local_file:
                 for chunk in response.iter_content(chunk_size=128):
                     local_file.write(chunk)
-            # log('DEBUG', 'Downloaded Clinvar file as {}'.format(local_file_path))
+            # log('DEBUG', 'Downloaded file as {}'.format(local_file_path))
         except Exception:
-            log('WARNING', 'Unable to download clinvar {}'.format(server_endpoint))
+            log('WARNING', 'Unable to download {}'.format(server_endpoint))
     else:
-        log('WARNING', 'Unable to contact clinvar {}'.format(server_endpoint))
+        log('WARNING', 'Unable to contact {}'.format(server_endpoint))
+
+
+def get_new_ncbi_resource_file(http, resource_type, resource_dir, regexp, label, url, target_suffix):
+    distant_md5 = None
+    download_semaph = None
+    resource_dir_content = None
+    # log('DEBUG', '{0}{1}.gz'.format(regexp, target_suffix))
+    try:
+        # Get all file names from clinvar website (html)
+        resource_dir_html = http.request('GET', url).data.decode('utf-8')
+        resource_dir_content = re.split('\n', resource_dir_html)
+        for html in resource_dir_content:
+            match_obj = re.search(rf'\"{regexp}{target_suffix}.gz\"', html)
+            if match_obj:
+                break
+            # log('DEBUG', html)
+        # log('DEBUG', match_obj)
+    except Exception:
+        log('WARNING', 'Unable to contact {0} {1}'.format(label, url))
+    if match_obj:
+        # Get current resource date
+        # log('DEBUG', match_obj)
+        if match_obj:
+            resource_date = match_obj.group(1)
+            # Read current clinvar md5
+            try:
+                resource_md5 = http.request('GET', '{0}{1}_{2}{3}.gz.md5'.format(url, resource_type, resource_date, target_suffix)).data.decode('utf-8')
+                match_obj = re.search(r'^(\w+)\s', resource_md5)
+                if match_obj:
+                    distant_md5 = match_obj.group(1)
+                    log('INFO', '{0} distant md5: {1}'.format(label, distant_md5))
+            except Exception:
+                log('WARNING', 'Unable to contact {0} md5 {1}'.format(label, url))
+            if distant_md5:
+                # Get md5 from local file
+                # current_md5_value = get_last_clinvar_md5_file('{}clinvar/hg38/'.format(resources_path))
+                current_md5_value = get_last_md5_file(resource_dir, resource_type, regexp, target_suffix)
+                log('INFO', '{0} local md5: {1}'.format(label, current_md5_value))
+                exit
+                if current_md5_value != distant_md5:
+                    # Download remote file
+                    # log('DEBUG', '{0}{1}_{2}{3}.gz'.format(url, resource_type, resource_date, target_suffix))
+                    # log('DEBUG', resource_dir)
+                    # log('DEBUG', '{0}{1}_{2}{3}.gz'.format(resource_dir, resource_type, resource_date, target_suffix))
+                    # try:
+                    download_file_from_server_endpoint(
+                        '{0}{1}_{2}{3}.gz'.format(url, resource_type, resource_date, target_suffix),
+                        '{0}{1}_{2}{3}.gz'.format(resource_dir, resource_type, resource_date, target_suffix)
+                    )
+                    download_file_from_server_endpoint(
+                        '{0}{1}_{2}{3}.gz.md5'.format(url, resource_type, resource_date, target_suffix),
+                        '{0}{1}_{2}{3}.gz.md5'.format(resource_dir, resource_type, resource_date, target_suffix)
+                    )
+                    download_file_from_server_endpoint(
+                        '{0}{1}_{2}{3}.gz.tbi'.format(url, resource_type, resource_date, target_suffix),
+                        '{0}{1}_{2}{3}.gz.tbi'.format(resource_dir, resource_type, resource_date, target_suffix)
+                    )
+                    download_semaph = 1
+                    # except Exception:
+                    #     log('WARNING', 'Unable to download new {0} file {1}{2}_{3}{4}.gz'.format(label, url, resource_type, resource_date, target_suffix))
+                    # Then check new md5 and test w/ a variant
+                    if download_semaph == 1:
+                        with open('{0}{1}_{2}{3}.gz'.format(resource_dir, resource_type, resource_date, target_suffix), 'rb') as new_resource_file:
+                            BLOCKSIZE = 65536
+                            buf = new_resource_file.read(BLOCKSIZE)
+                            hasher = hashlib.md5()
+                            while len(buf) > 0:
+                                hasher.update(buf)
+                                buf = new_resource_file.read(BLOCKSIZE)
+                            # log('DEBUG', hasher.hexdigest() )
+                            if hasher.hexdigest() == distant_md5:
+                                # Download successful
+                                log('INFO', 'Successfully downloaded and checked {0} file {1}_{2}{3}.gz'.format(label, resource_type, resource_date, target_suffix))
+                            else:
+                                # Remove file
+                                os.remove('{0}{1}_{2}{3}.gz'.format(resource_dir, resource_type, resource_date, target_suffix))
+                                os.remove('{0}{1}_{2}{3}.gz.md5'.format(resource_dir, resource_type, resource_date, target_suffix))
+                                os.remove('{0}{1}_{2}{3}.gz.tbi'.format(resource_dir, resource_type, resource_date, target_suffix))
+                                log('WARNING', 'Error in md5 sum for {0} file {0}_{1}{2}.gz'.format(resource_type, resource_date, target_suffix))
 
 
 def main():
@@ -70,83 +166,183 @@ def main():
     args = parser.parse_args()
 
     clinvar_url = 'https://ftp.ncbi.nlm.nih.gov/pub/clinvar/vcf_GRCh38/'
-    dbsnp_url = ''
+    dbsnp_url = 'https://ftp.ncbi.nih.gov/snp/latest_release/'
     resources_path = '/home/adminbioinfo/Devs/MobiDetails/MobiDetailsApp/static/resources/'
     http = urllib3.PoolManager(cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())
     match_obj = None
     if args.clinvar:
-        distant_md5 = None
-        download_semaph = None
-        clinvar_dir_content = None
-        try:
-            # Get all file names from clinvar website (html)
-            clinvar_dir_html = http.request('GET', clinvar_url).data.decode('utf-8')
-            clinvar_dir_content = re.split('\n', clinvar_dir_html)
-            for html in clinvar_dir_content:
-                match_obj = re.search(r'\"clinvar_(\d+).vcf.gz\"', html)
-                if match_obj:
-                    break
-                # log('DEBUG', html)
-            # log('DEBUG', match_obj)
-        except Exception:
-            log('WARNING', 'Unable to contact ClinVar {}'.format(clinvar_url))
-        if match_obj:
-            # Get current clinvar date
-            # log('DEBUG', match_obj)
+        # get_new_resource_file(resource_type, resources_dir, regexp, label, url, target_path, suffix, http object)
+        get_new_ncbi_resource_file(http, 'clinvar', '{}clinvar/hg38/'.format(resources_path), 'clinvar_(\d+)', 'ClinVar', clinvar_url, '.vcf')
+        # distant_md5 = None
+        # download_semaph = None
+        # clinvar_dir_content = None
+        # try:
+        #     # Get all file names from clinvar website (html)
+        #     clinvar_dir_html = http.request('GET', clinvar_url).data.decode('utf-8')
+        #     clinvar_dir_content = re.split('\n', clinvar_dir_html)
+        #     for html in clinvar_dir_content:
+        #         match_obj = re.search(r'\"clinvar_(\d+).vcf.gz\"', html)
+        #         if match_obj:
+        #             break
+        #         # log('DEBUG', html)
+        #     # log('DEBUG', match_obj)
+        # except Exception:
+        #     log('WARNING', 'Unable to contact ClinVar {}'.format(clinvar_url))
+        # if match_obj:
+        #     # Get current clinvar date
+        #     # log('DEBUG', match_obj)
+        #     if match_obj:
+        #         clinvar_date = match_obj.group(1)
+        #         # Read current clinvar md5
+        #         try:
+        #             clinvar_md5 = http.request('GET', '{0}clinvar_{1}.vcf.gz.md5'.format(clinvar_url, clinvar_date)).data.decode('utf-8')
+        #             match_obj = re.search(r'^(\w+)\s', clinvar_md5)
+        #             if match_obj:
+        #                 distant_md5 = match_obj.group(1)
+        #                 log('INFO', 'ClinVar distant md5: {}'.format(distant_md5))
+        #         except Exception:
+        #             log('WARNING', 'Unable to contact ClinVar md5 {}'.format(clinvar_url))
+        #         if distant_md5:
+        #             # Get md5 from local file
+        #             # current_md5_value = get_last_clinvar_md5_file('{}clinvar/hg38/'.format(resources_path))
+        #             current_md5_value = get_last_md5_file('{}clinvar/hg38/'.format(resources_path), 'clinvar', 'clinvar_(\d+)')
+        #             log('INFO', 'ClinVar local md5: {}'.format(current_md5_value))
+        #             exit
+        #             if current_md5_value != distant_md5:
+        #                 # Download remote file
+        #                 try:
+        #                     download_file_from_server_endpoint(
+        #                         '{0}clinvar_{1}.vcf.gz'.format(clinvar_url, clinvar_date),
+        #                         '{0}clinvar/hg38/clinvar_{1}.vcf.gz'.format(resources_path, clinvar_date)
+        #                     )
+        #                     download_file_from_server_endpoint(
+        #                         '{0}clinvar_{1}.vcf.gz.md5'.format(clinvar_url, clinvar_date),
+        #                         '{0}clinvar/hg38/clinvar_{1}.vcf.gz.md5'.format(resources_path, clinvar_date)
+        #                     )
+        #                     download_file_from_server_endpoint(
+        #                         '{0}clinvar_{1}.vcf.gz.tbi'.format(clinvar_url, clinvar_date),
+        #                         '{0}clinvar/hg38/clinvar_{1}.vcf.gz.tbi'.format(resources_path, clinvar_date)
+        #                     )
+        #                     download_semaph = 1
+        #                 except Exception:
+        #                     log('WARNING', 'Unable to download new ClinVar file {0}clinvar_{1}.vcf.gz'.format(clinvar_url, clinvar_date))
+        #                 # Then check clinvar md5 and test w/ a variant
+        #                 if download_semaph == 1:
+        #                     with open('{0}clinvar/hg38/clinvar_{1}.vcf.gz'.format(resources_path, clinvar_date), 'rb') as clinvar_file:
+        #                         BLOCKSIZE = 65536
+        #                         buf = clinvar_file.read(BLOCKSIZE)
+        #                         hasher = hashlib.md5()
+        #                         while len(buf) > 0:
+        #                             hasher.update(buf)
+        #                             buf = clinvar_file.read(BLOCKSIZE)
+        #                         # log('DEBUG', hasher.hexdigest() )
+        #                         if hasher.hexdigest() == distant_md5:
+        #                             # Download successful
+        #                             log('INFO', 'Successfully downloaded and checked ClinVar file clinvar_{0}.vcf.gz'.format(clinvar_date))
+        #                         else:
+        #                             # Remove file
+        #                             os.remove('{0}clinvar/hg38/clinvar_{1}.vcf.gz'.format(resources_path, clinvar_date))
+        #                             os.remove('{0}clinvar/hg38/clinvar_{1}.vcf.gz.md5'.format(resources_path, clinvar_date))
+        #                             os.remove('{0}clinvar/hg38/clinvar_{1}.vcf.gz.tbi'.format(resources_path, clinvar_date))
+        #                             log('WARNING', 'Error in md5 sum for ClinVar file clinvar_{0}.vcf.gz'.format(clinvar_date))
+    if args.dbsnp:
+        # get dbsnp version from https://ftp.ncbi.nih.gov/snp/latest_release/release_notes.txt
+        download_file_from_server_endpoint(
+            '{}release_notes.txt'.format(dbsnp_url),
+            '{}dbsnp/release_notes.txt'.format(resources_path)
+        )
+        with open('{}dbsnp/release_notes.txt'.format(resources_path), 'r') as f:
+            match_obj = re.search(r'dbSNP build (\d+) release notes', f.readline())
+            semaph = 0
             if match_obj:
-                clinvar_date = match_obj.group(1)
-                # Read current clinvar md5
-                try:
-                    clinvar_md5 = http.request('GET', '{0}clinvar_{1}.vcf.gz.md5'.format(clinvar_url, clinvar_date)).data.decode('utf-8')
-                    match_obj = re.search(r'^(\w+)\s', clinvar_md5)
-                    if match_obj:
-                        distant_md5 = match_obj.group(1)
-                        log('INFO', 'ClinVar distant md5: {}'.format(distant_md5))
-                except Exception:
-                    log('WARNING', 'Unable to contact ClinVar md5 {}'.format(clinvar_url))
-                if distant_md5:
-                    # Get md5 from local file
-                    current_md5_value = get_last_clinvar_md5_file('{}clinvar/hg38/'.format(resources_path))
-                    log('INFO', 'ClinVar local md5: {}'.format(current_md5_value))
-                    if current_md5_value != distant_md5:
-                        # Download remote file
-                        try:
-                            download_file_from_server_endpoint(
-                                '{0}clinvar_{1}.vcf.gz'.format(clinvar_url, clinvar_date),
-                                '{0}clinvar/hg38/clinvar_{1}.vcf.gz'.format(resources_path, clinvar_date)
-                            )
-                            download_file_from_server_endpoint(
-                                '{0}clinvar_{1}.vcf.gz.md5'.format(clinvar_url, clinvar_date),
-                                '{0}clinvar/hg38/clinvar_{1}.vcf.gz.md5'.format(resources_path, clinvar_date)
-                            )
-                            download_file_from_server_endpoint(
-                                '{0}clinvar_{1}.vcf.gz.tbi'.format(clinvar_url, clinvar_date),
-                                '{0}clinvar/hg38/clinvar_{1}.vcf.gz.tbi'.format(resources_path, clinvar_date)
-                            )
-                            download_semaph = 1
-                        except Exception:
-                            log('WARNING', 'Unable to download new ClinVar file {0}clinvar_{1}.vcf.gz'.format(clinvar_url, clinvar_date))
-                        # Then check clinvar md5 and test w/ a variant
-                        if download_semaph == 1:
-                            with open('{0}clinvar/hg38/clinvar_{1}.vcf.gz'.format(resources_path, clinvar_date), 'rb') as clinvar_file:
-                                BLOCKSIZE = 65536
-                                buf = clinvar_file.read(BLOCKSIZE)
-                                hasher = hashlib.md5()
-                                while len(buf) > 0:
-                                    hasher.update(buf)
-                                    buf = clinvar_file.read(BLOCKSIZE)
-                                # log('DEBUG', hasher.hexdigest() )
-                                if hasher.hexdigest() == distant_md5:
-                                    # Download successful
-                                    log('INFO', 'Successfully downloaded and checked ClinVar file clinvar_{0}.vcf.gz'.format(clinvar_date))
-                                else:
-                                    # Remove file
-                                    os.remove('{0}clinvar/hg38/clinvar_{1}.vcf.gz'.format(resources_path, clinvar_date))
-                                    os.remove('{0}clinvar/hg38/clinvar_{1}.vcf.gz.md5'.format(resources_path, clinvar_date))
-                                    os.remove('{0}clinvar/hg38/clinvar_{1}.vcf.gz.tbi'.format(resources_path, clinvar_date))
-                                    log('WARNING', 'Error in md5 sum for ClinVar file clinvar_{0}.vcf.gz'.format(clinvar_date))
-
-
+                dbsnp_version = match_obj.group(1)
+                log('INFO', 'dbSNP version file found: v{0}'.format(dbsnp_version))
+                if not os.path.exists('{0}/dbsnp/v{1}'.format(resources_path, dbsnp_version)):
+                    os.makedirs('{0}/dbsnp/v{1}'.format(resources_path, dbsnp_version))
+                else:
+                    log('INFO', 'dbSNP version file found: v{0} same as current'.format(dbsnp_version))
+                    semaph = 1
+                # os.mkdir('{0}/dbsnp/v{1}'.format(resources_path, dbsnp_version))
+            else:
+                log('ERROR', 'Unable to donwload/read dbSNP release file from: '.format('{}release_notes.txt'.format(dbsnp_url)))
+            if semaph == 0:
+                # we can proceed
+                get_new_ncbi_resource_file(http, 'GCF', '{0}dbsnp/hg38/v{1}/'.format(resources_path, dbsnp_version), 'GCF_(\d+)', 'dbSNP', '{0}VCF/'.format(dbsnp_url), '.38')
+        #release_fh = open('{}dbsnp/release_notes.txt'.format(resources_path), 'r')
+        #release_content = release_fh.read()
+        # log('DEBUG', release_content)
+        #match_obj = re.search(r'dbSNP build (\d+) release notes', release_content)
+        
+        # distant_md5 = None
+        # download_semaph = None
+        # dbsnp_dir_content = None
+        # try:
+        #     # Get all file names from clinvar website (html)
+        #     dbsnp_dir_html = http.request('GET', clinvar_url).data.decode('utf-8')
+        #     dbsnp_dir_content = re.split('\n', clinvar_dir_html)
+        #     for html in dbsnp_dir_content:
+        #         match_obj = re.search(r'\"GCF_(\d+).38.vcf.gz\"', html)
+        #         if match_obj:
+        #             break
+        #         # log('DEBUG', html)
+        #     # log('DEBUG', match_obj)
+        # except Exception:
+        #     log('WARNING', 'Unable to contact dbSNP {}'.format(clinvar_url))
+        # if match_obj:
+        #     # Get current dbsnp version
+        #     # log('DEBUG', match_obj)
+        #     if match_obj:
+        #         dbsnp_version = match_obj.group(1)
+        #         # Read current clinvar md5
+        #         try:
+        #             dbsnp_md5 = http.request('GET', '{0}GCF_{1}.38.vcf.gz.md5'.format(clinvar_url, dbsnp_version)).data.decode('utf-8')
+        #             match_obj = re.search(r'^(\w+)\s', dbsnp_md5)
+        #             if match_obj:
+        #                 distant_md5 = match_obj.group(1)
+        #                 log('INFO', 'dbSNP distant md5: {}'.format(distant_md5))
+        #         except Exception:
+        #             log('WARNING', 'Unable to dbSNP ClinVar md5 {}'.format(clinvar_url))
+        #         if distant_md5:
+        #             # Get md5 from local file
+        #             current_md5_value = get_last_clinvar_md5_file('{}clinvar/hg38/'.format(resources_path))
+        #             log('INFO', 'ClinVar local md5: {}'.format(current_md5_value))
+        #             if current_md5_value != distant_md5:
+        #                 # Download remote file
+        #                 try:
+        #                     download_file_from_server_endpoint(
+        #                         '{0}clinvar_{1}.vcf.gz'.format(clinvar_url, clinvar_date),
+        #                         '{0}clinvar/hg38/clinvar_{1}.vcf.gz'.format(resources_path, clinvar_date)
+        #                     )
+        #                     download_file_from_server_endpoint(
+        #                         '{0}clinvar_{1}.vcf.gz.md5'.format(clinvar_url, clinvar_date),
+        #                         '{0}clinvar/hg38/clinvar_{1}.vcf.gz.md5'.format(resources_path, clinvar_date)
+        #                     )
+        #                     download_file_from_server_endpoint(
+        #                         '{0}clinvar_{1}.vcf.gz.tbi'.format(clinvar_url, clinvar_date),
+        #                         '{0}clinvar/hg38/clinvar_{1}.vcf.gz.tbi'.format(resources_path, clinvar_date)
+        #                     )
+        #                     download_semaph = 1
+        #                 except Exception:
+        #                     log('WARNING', 'Unable to download new ClinVar file {0}clinvar_{1}.vcf.gz'.format(clinvar_url, clinvar_date))
+        #                 # Then check clinvar md5 and test w/ a variant
+        #                 if download_semaph == 1:
+        #                     with open('{0}clinvar/hg38/clinvar_{1}.vcf.gz'.format(resources_path, clinvar_date), 'rb') as clinvar_file:
+        #                         BLOCKSIZE = 65536
+        #                         buf = clinvar_file.read(BLOCKSIZE)
+        #                         hasher = hashlib.md5()
+        #                         while len(buf) > 0:
+        #                             hasher.update(buf)
+        #                             buf = clinvar_file.read(BLOCKSIZE)
+        #                         # log('DEBUG', hasher.hexdigest() )
+        #                         if hasher.hexdigest() == distant_md5:
+        #                             # Download successful
+        #                             log('INFO', 'Successfully downloaded and checked ClinVar file clinvar_{0}.vcf.gz'.format(clinvar_date))
+        #                         else:
+        #                             # Remove file
+        #                             os.remove('{0}clinvar/hg38/clinvar_{1}.vcf.gz'.format(resources_path, clinvar_date))
+        #                             os.remove('{0}clinvar/hg38/clinvar_{1}.vcf.gz.md5'.format(resources_path, clinvar_date))
+        #                             os.remove('{0}clinvar/hg38/clinvar_{1}.vcf.gz.tbi'.format(resources_path, clinvar_date))
+        #                             log('WARNING', 'Error in md5 sum for ClinVar file clinvar_{0}.vcf.gz'.format(clinvar_date))
 if __name__ == '__main__':
     main()
 

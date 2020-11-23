@@ -95,7 +95,7 @@ def main():
                                         re.search(r'No transcript definition for', warning) or \
                                         re.search(r'No transcripts found', warning) or \
                                         re.search(r'expected one of', warning):
-                                    log('WARNING', "Cannot update gene {0} from {1} to {2} because of {1}".format(gene['name'][0], res_nm[0], max_vv_nm, warning))
+                                    log('WARNING', "Cannot update gene {0} from {1} to {2} because of {3}".format(gene['name'][0], res_nm[0], max_vv_nm, warning))
                                     noupdate = 1
                                     break
                     if not noupdate:
