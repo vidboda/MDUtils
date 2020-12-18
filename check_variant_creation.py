@@ -71,7 +71,7 @@ def main():
         i += 1
         if i % 500 == 0:
             log('INFO', '{0}/{1} genes checked'.format(i, num_can))
-        variant = '{0}.{1}:c.1A>T'.format(gene['name'][1], gene['nm_version'])
+        # variant = '{0}.{1}:c.1A>T'.format(gene['name'][1], gene['nm_version'])
         # md_url = '{0}/api/variant/create/{1}/{2}'.format(remote_addr, variant, api_key)
         md_url = '{0}/api/variant/create'.format(remote_addr)
         variant_chgvs = '{0}.{1}:c.1A>T'.format(gene['name'][1], gene['nm_version'])

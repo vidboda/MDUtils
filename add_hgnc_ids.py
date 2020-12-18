@@ -125,7 +125,7 @@ def main():
                         log('WARNING', 'Chr discrepancy: MD chr: {0} - HGNC chr: {1}'.format(md_gene['chr'], hgnc_chr))
             else:
                 previous_names_list = re.split(',', hgnc[header['Previous symbols']].replace(' ', ''))
-                update_semaph = 0
+                # update_semaph = 0
                 for name in previous_names_list:
                     curs.execute(
                         "SELECT name, second_name, chr, hgnc_id FROM gene WHERE name[1] = %s AND canonical = 't'",
@@ -133,7 +133,7 @@ def main():
                     )
                     md_gene_to_update = curs.fetchone()                    
                     if md_gene_to_update:
-                        update_semaph = 1
+                        # update_semaph = 1
                         log('INFO', 'MD Gene name {0} needs to be updated to {1}'.format(md_gene_to_update['name'][0], hgnc[header['Approved symbol']]))
                         curs.execute(
                             "UPDATE gene SET name[1] = %s, hgnc_id = %s WHERE name[1] = %s",
@@ -152,8 +152,8 @@ def main():
                             log('INFO', "UPDATE gene SET second_name = '{0}' WHERE name[1] = '{1}'".format(aliases, hgnc[header['Approved symbol']]))
                             db.commit()
                         break
-                    if update_semaph == 0:
-                        log('WARNING', 'HGNC not in MD: {0}-{1}'.format(hgnc[header['HGNC ID']], hgnc[header['Approved symbol']]))
+                    # if update_semaph == 0:
+                    log('WARNING', 'HGNC not in MD: {0}-{1}'.format(hgnc[header['HGNC ID']], hgnc[header['Approved symbol']]))
         else:
             log('WARNING', 'Cannot identify HGNC ID: {}'.format(hgnc[header['HGNC ID']]))
         # if i > 50:
