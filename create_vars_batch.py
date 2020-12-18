@@ -96,6 +96,7 @@ def main():
                     md_url = '{0}/api/variant/create'.format(md_base_url)
                     data = {
                         'variant_chgvs': urllib.parse.quote('{0}.{1}:{2}'.format(acc_number, acc_version, var)),
+                        'caller': 'cli',
                         'api_key': api_key
                     }
                     log('INFO', 'Submitting variant {0}.{1}:{2} to MobiDetails: {3}'.format(acc_number, acc_version, var, md_url))
@@ -111,20 +112,22 @@ def main():
                     gene = match_obj.group(2)
                     md_url_check = '{0}/api/gene/{1}'.format(md_base_url, gene)
                     semaph = 'no'
-                    try:
-                        md_check_response = json.loads(http.request('GET', md_url_check, headers=header).data.decode('utf-8'))
-                        for flag in md_check_response:
-                            if flag == 'HGNC':
-                                semaph = 'yes'
-                                continue
-                    except Exception:
-                        log('WARNING', 'The gene {} could not be checked for some reason in MobiDetails'.format(gene))
+                    # print(md_url_check)
+                    #try:
+                    md_check_response = json.loads(http.request('GET', md_url_check, headers=header).data.decode('utf-8'))
+                    for flag in md_check_response:
+                        if flag == 'HGNC Name':
+                            semaph = 'yes'
+                            continue
+                    # print(md_check_response)
+                    #except Exception:
+                    #    log('WARNING', 'The gene {} could not be checked for some reason in MobiDetails'.format(gene))
                     if semaph == 'yes':
                         # md_url = '{0}/api/variant/create_g/{1}/{2}/cli/{3}'.format(md_base_url, g_var, gene, api_key)
                         md_url = '{0}/api/variant/create_g'.format(md_base_url)
                         data = {
                             'variant_ghgvs': g_var,
-                            'gene': gene,
+                            'gene_hgnc': gene,
                             'caller': 'cli',
                             'api_key': api_key
                         }

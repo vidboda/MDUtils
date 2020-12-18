@@ -32,7 +32,7 @@ def main():
     args = parser.parse_args()
     remote_addr = args.remote_server
     if re.search(r'mobidetails\.iurc', remote_addr):
-        log('ERROR', 'This script is not untended to work with the production server')
+        log('ERROR', 'This script is not intended to work with the production server')
     if len(args.api_key) != 43:
         log('ERROR', 'Invalid API key, please check it')
     else:
@@ -47,12 +47,18 @@ def main():
        "DELETE FROM variant_feature WHERE c_name = '1A>T'"
     )
     db.commit()
+    # # reinitialise gene state
+    # curs.execute(
+    #    "UPDATE gene SET variant_creation = 'ok'"
+    # )
+    db.commit()
 
     http = urllib3.PoolManager(cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())
 
     curs.execute(
         "SELECT DISTINCT(name), nm_version, variant_creation FROM gene WHERE canonical = 't' ORDER BY name"
     )
+    #  AND variant_creation IN ('hg19_mapping_default', 'hg38_mapping_default')
     can = curs.fetchall()
     num_can = curs.rowcount
     i = 0
@@ -74,6 +80,12 @@ def main():
             'caller': 'cli',
             'api_key': api_key
         }
+        # reinitialise gene state before query
+        curs.execute(
+            "UPDATE gene SET variant_creation = 'ok' WHERE name[2] = %s",
+            (gene['name'][1],)
+        )
+        db.commit()
         try:
             md_response = json.loads(http.request('POST', md_url, headers=md_utilities.api_agent, fields=data).data.decode('utf-8'))
         # try:
@@ -117,6 +129,12 @@ def main():
                         "UPDATE gene SET variant_creation = 'hg19_mapping_default' WHERE name[2] = '{}'".format(gene['name'][1])
                     )
                     log('INFO', 'MD gene table updated with variant_creation = hg19_mapping_default')
+                elif re.search(r'with the variant position and intron', md_response['mobidetails_error']):
+                    curs.execute(
+                        "UPDATE gene SET variant_creation = 'mapping_default' WHERE name[2] = '{}'".format(gene['name'][1])
+                    )
+                    log('INFO', 'MD gene table updated with variant_creation = mapping_default')
+                
             elif 'mobidetails_id' in md_response and gene['variant_creation'] != 'ok':
                 curs.execute(
                     "UPDATE gene SET variant_creation = 'ok' WHERE name[2] = '{}'".format(gene['name'][1])
