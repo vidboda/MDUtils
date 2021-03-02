@@ -125,6 +125,9 @@ def main():
                             match_object = re.search('NP_\d+\.\d.*:p\.\(?(.+)\)?', vv_data[first_level_key]['hgvs_predicted_protein_consequence']['tlr'])
                             if match_object:
                                 p_name = match_object.group(1)
+                                if re.search(r'\)$', p_name):
+                                    # remove last ')'
+                                    p_name = p_name[:-1]
                             else:
                                 log('WARNING', 'No p_name in VV results')
                         else:
@@ -236,7 +239,7 @@ def main():
                         )
                     log('INFO', 'Variant {0} updated to {1}'.format(var['c_name'], new_c_name))
 
-    db.commit()        
+    db.commit()
 
 if __name__ == '__main__':
     main()
