@@ -31,14 +31,15 @@ def main():
     #     "SELECT c.pos, a.id, a.c_name, a.dna_type, a.variant_size, a.wt_seq, a.mt_seq, b.chr FROM variant_feature a, gene b, variant c WHERE a.id = c.feature_id AND a.gene_name = b.name AND b.strand = '-' AND a.dna_type IN ('deletion', 'duplication' , 'indel') AND c.genome_version = 'hg38'"
     # )
     curs.execute(
-        "SELECT c.pos, a.id, a.c_name, a.dna_type, a.variant_size, a.wt_seq, a.mt_seq, b.chr FROM variant_feature a, gene b, variant c WHERE a.id = c.feature_id AND a.gene_name = b.name AND b.strand = '-' AND a.dna_type ='indel' AND c.genome_version = 'hg38'"
+        "SELECT c.pos, a.id, a.c_name, a.dna_type, a.variant_size, a.wt_seq, a.mt_seq, b.chr, b.strand FROM variant_feature a, gene b, variant c WHERE a.id = c.feature_id AND a.gene_name = b.name AND a.dna_type ='insertion' AND c.genome_version = 'hg38'"
     )
     res = curs.fetchall()
     log('INFO', '{} variants to be checked:'.format(len(res)))
     j = 0
     for var in res:
         pos_vcf = int(var['pos'])
-        if var['dna_type'] == 'indel':
+        if var['dna_type'] == 'indel' or \
+            var['dna_type'] == 'insertion':
             pos_vcf -= 1
         x = pos_vcf - 25
         y = pos_vcf + int(var['variant_size']) + 25
@@ -48,11 +49,12 @@ def main():
         seq_slice = current_chrom[x:y].upper()
         # seq2 = current_chrom[int(positions[0])+1:int(positions[0])+2]
         # return seq2
-        # if res_strand['strand'] == '-':
-        seq_slice = md_utilities.reverse_complement(seq_slice).upper()
-        begin = seq_slice[:25]
-        middle = seq_slice[25:len(seq_slice)-25]
-        end = seq_slice[-25:]
+        if var['strand'] == '-':
+            seq_slice = md_utilities.reverse_complement(seq_slice).upper()
+        marker = 25 if var['dna_type'] != 'insertion' else 26
+        begin = seq_slice[:marker]
+        middle = seq_slice[marker:len(seq_slice)-marker]
+        end = seq_slice[-marker:]
 
         new_wt_seq = None
         new_mt_seq = None
@@ -80,6 +82,13 @@ def main():
                 exp += '-'
             new_wt_seq = "{0} {1}{2} {3}".format(begin, middle, exp, end)
             new_mt_seq = "{0} {1}{1} {2}".format(begin, middle, end)
+        elif var['dna_type'] == 'insertion':
+            ins_obj = re.search(r'ins([ATGC]+)', var['c_name'])
+            exp = ''
+            for i in range(0, len(ins_obj.group(1))):
+                exp += '-'
+            new_wt_seq = "{0} {1} {2}".format(begin, exp, end)
+            new_mt_seq = "{0} {1} {2}".format(begin, ins_obj.group(1), end)
         if new_wt_seq != var['wt_seq'] or \
                 new_mt_seq != var['wt_seq']:
             curs.execute(
