@@ -43,7 +43,7 @@ def main():
             log('INFO', '{0}/{1} genes checked'.format(i, count))
         # print("MD------{}".format(gene['name'][1]))
         # get VV info for the gene
-        http = urllib3.PoolManager(cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())       
+        http = urllib3.PoolManager(cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())
         vv_url = "{0}/VariantValidator/tools/gene2transcripts/{1}?content-type=application/json".format(vv_url_base, gene['name'][1])
         try:
             vv_data = json.loads(http.request('GET', vv_url).data.decode('utf-8'))
@@ -107,5 +107,7 @@ def main():
                 db.commit()
 
         print('.', end="", flush=True)
+
+
 if __name__ == '__main__':
     main()
