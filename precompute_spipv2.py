@@ -34,7 +34,7 @@ def main():
     db = get_db()
     curs = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
     curs.execute(
-        "SELECT id, gene_name[1] as symbol, gene_name[2] as nm, c_name FROM variant_feature ORDER BY RANDOM() LIMIT 3000"
+        "SELECT id, gene_name[1] as symbol, gene_name[2] as nm, c_name FROM variant_feature ORDER BY RANDOM()"
     )
     res = curs.fetchall()
     total = curs.rowcount
