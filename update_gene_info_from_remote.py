@@ -228,6 +228,7 @@ def main():
                                 log('INFO', 'Updating gene total exons of {0} to {1}'.format(nm_acc, exons))
                                 q += 1
         db.commit()
+        
         log('INFO', '{} UNIPROT IDs modified'.format(k))
         log('INFO', '{} variantCreationTag modified'.format(m))
         log('INFO', '{} RefSeq NM accession version modified'.format(n))

@@ -124,6 +124,7 @@ def main():
                     "UPDATE gene SET prot_name = %s WHERE name[1] = %s",
                     (vv_data['current_name'], gene['name'][0])
                 )
+                db.commit()
                 log('INFO', "NAME UPDATE: gene {0} modified from {1} to {2}".format(gene['name'][0], gene['prot_name'], vv_data['current_name']))
 
         if 'transcripts' in vv_data:
@@ -148,6 +149,7 @@ def main():
                                 (transcript['translation'], gene['name'][1])
                             )
                             log('INFO', "NP UPDATE: gene {0} modified from {1} to {2}".format(gene['name'][0], gene['np'], transcript['translation']))
+                        db.commit()
                 # print("VV------{}".format(transcript['reference']))
                 match_object = re.search(r'^(N[MR]_\d+)\.(\d{1,2})', transcript['reference'])
                 if match_object:
