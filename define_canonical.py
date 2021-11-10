@@ -111,7 +111,7 @@ def main():
     log('INFO', "3rd Query: get info from NCBI for genes with no canonical defined remaining")
     # 3rd get info at NCBI
     # API key mandatory
-    if ncbi_api_key is not None:        
+    if ncbi_api_key is not None:
         # get list of remaining genes with no canonical defined
         # "SELECT name, np, canonical FROM gene WHERE name[1] NOT IN (SELECT name[1] FROM gene WHERE canonical='t') ORDER BY name" - removed, too long
         curs.execute(
@@ -153,7 +153,7 @@ def main():
                             "UPDATE gene SET np = '{0}.{1}' WHERE name[2] = '{2}'".format(match_object.group(1), match_object.group(2), acc['name'][1])
                         )
                         log('INFO', 'Updated gene NP acc no of {0} to {1}.{2}'.format(acc['name'][0], match_object.group(1), match_object.group(2)))
-            
+
         if args.update_refgene:
             log('INFO', "Update refGene")
             # get genes w/ no variants, and at least 2 isoforms to check which one should be canonical
@@ -175,6 +175,8 @@ def main():
                     # log('DEBUG', eutils_response)
                     # log('DEBUG', acc['canonical'])
                     # log('DEBUG', re.search(r'"RefSeq\sSelect\scriteria"', eutils_response))
+
+                # now we also have the "MANE Select" from the MANE project - should be updated
                 if re.search(r'"RefSeq\sSelect\scriteria"', eutils_response) and acc['canonical'] is False:
                     curs.execute(
                         "UPDATE gene SET canonical = 'f' WHERE name[1] = %s",

@@ -63,7 +63,7 @@ def main():
         'RefSeq IDs': 7,
         'Alias names': 8,
     }
-    for line in open(hgnc_file).readlines():        
+    for line in open(hgnc_file).readlines():
         i += 1
         if i == 1:
             continue
@@ -131,7 +131,7 @@ def main():
                         "SELECT name, second_name, chr, hgnc_id FROM gene WHERE name[1] = %s AND canonical = 't'",
                         (name,)
                     )
-                    md_gene_to_update = curs.fetchone()                    
+                    md_gene_to_update = curs.fetchone()
                     if md_gene_to_update:
                         # update_semaph = 1
                         log('INFO', 'MD Gene name {0} needs to be updated to {1}'.format(md_gene_to_update['name'][0], hgnc[header['Approved symbol']]))
@@ -159,6 +159,7 @@ def main():
         # if i > 50:
         #     break
     log('INFO', '{0} lines checked and {1} genes updated'.format(i, j))
+
 
 if __name__ == '__main__':
     main()

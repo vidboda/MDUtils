@@ -31,13 +31,19 @@ def main():
     parser.add_argument('-uca', '--update-can-all', default='', required=False,
                         help='Optionally update canonical for all genes w/ no variants', action='store_true')
     parser.add_argument('-np', '--update-np', default='', required=False,
-                        help='Optionally update NP for genes', action='store_true')
+                        help='Optionally update NP for genes lacking NP', action='store_true')
     parser.add_argument('-uu', '--update-uniprot', default='', required=False,
                         help='Optionally update UNIPROT IDs', action='store_true')
     parser.add_argument('-uc', '--update-creation', default='', required=False,
                         help='Optionally update variant_creation tag', action='store_true')
     parser.add_argument('-un', '--update-nm', default='', required=False,
-                        help='Optionally update RefSeq Nm accession number tag', action='store_true')
+                        help='Optionally update RefSeq NM accession number tag', action='store_true')
+    parser.add_argument('-npf', '--update-np-full', default='', required=False,
+                        help='Optionally update NP for all genes', action='store_true')
+    parser.add_argument('-ue', '--update-exons', default='', required=False,
+                        help='Optionally update number of exons for all genes', action='store_true')
+    parser.add_argument('-ugn', '--update-gene-names', default='', required=False,
+                        help='Optionally update HGNC gene names for all genes', action='store_true')
 
     args = parser.parse_args()
     remote_addr = args.remote_server
@@ -146,12 +152,12 @@ def main():
                             j += 1
         db.commit()
         log('INFO', '{} NP acc no modified'.format(j))
-    if args.update_uniprot or args.update_creation or args.update_nm:
+    if args.update_uniprot or args.update_creation or args.update_nm or args.update_np_full or args.update_exons or args.update_gene_names:
         curs.execute(
             "SELECT  name[1] as HGNC, name[2] as nm, nm_version, np, uniprot_id, variant_creation FROM gene ORDER BY name"
         )
         res = curs.fetchall()
-        k = l = m = n = 0
+        k = l = m = n = p = q = r = 0
         o = curs.rowcount
         for gene in res:
             req_url = '{0}/api/gene/{1}'.format(remote_addr, gene['hgnc'])
@@ -160,6 +166,15 @@ def main():
             if l % 1000 == 0:
                 log('INFO', '{0}/{1} isoforms checked'.format(l, o))
             for keys in api_response:
+                if 'HGNC Name' in api_response[keys] and args.update_gene_names:
+                    gene_name = api_response[keys]['HGNC Name']
+                    if gene_name != gene['prot_name']:
+                        curs.execute(
+                            "UPDATE gene set prot_name = %s WHERE name[2] = %s",
+                            (gene_name, nm_acc)
+                        )
+                        log('INFO', 'Updating gene name of {0} to {1}'.format(nm_acc, ungene_nameiprot))
+                        r += 1
                 match_obj = re.search(r'^(NM_\d+)\.(\d+)$', keys)
                 if match_obj:
                     nm_acc = match_obj.group(1)
@@ -194,10 +209,31 @@ def main():
                                 )
                                 log('INFO', 'Updating gene variantCreationTag of {0} to {1}'.format(nm_acc, tag))
                                 m += 1
+                        if 'RefProtein' in api_response[keys] and args.update_np_full:
+                            np = api_response[keys]['RefProtein']
+                            if np != gene['np']:
+                                curs.execute(
+                                    "UPDATE gene set np = %s WHERE name[2] = %s",
+                                    (np, nm_acc)
+                                )
+                                log('INFO', 'Updating gene np of {0} to {1}'.format(nm_acc, np))
+                                p += 1
+                        if 'total exons' in api_response[keys] and args.update_np_full:
+                            exons = api_response[keys]['total exons']
+                            if exons != gene['number_of_exons']:
+                                curs.execute(
+                                    "UPDATE gene set number_of_exons = %s WHERE name[2] = %s",
+                                    (exons, nm_acc)
+                                )
+                                log('INFO', 'Updating gene total exons of {0} to {1}'.format(nm_acc, exons))
+                                q += 1
         db.commit()
         log('INFO', '{} UNIPROT IDs modified'.format(k))
         log('INFO', '{} variantCreationTag modified'.format(m))
         log('INFO', '{} RefSeq NM accession version modified'.format(n))
+        log('INFO', '{} NP version modified'.format(p))
+        log('INFO', '{} Exons number modified'.format(q))
+        log('INFO', '{} Gene names modified'.format(r))
 
 
 if __name__ == '__main__':
