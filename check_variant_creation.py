@@ -56,7 +56,7 @@ def main():
     http = urllib3.PoolManager(cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())
 
     curs.execute(
-        "SELECT DISTINCT(name), nm_version, variant_creation FROM gene WHERE canonical = 't' ORDER BY name"
+        "SELECT DISTINCT(name), variant_creation FROM gene WHERE canonical = 't' ORDER BY name"
     )
     #  AND variant_creation IN ('hg19_mapping_default', 'hg38_mapping_default')
     can = curs.fetchall()
@@ -74,7 +74,7 @@ def main():
         # variant = '{0}.{1}:c.1A>T'.format(gene['name'][1], gene['nm_version'])
         # md_url = '{0}/api/variant/create/{1}/{2}'.format(remote_addr, variant, api_key)
         md_url = '{0}/api/variant/create'.format(remote_addr)
-        variant_chgvs = '{0}.{1}:c.1A>T'.format(gene['name'][1], gene['nm_version'])
+        variant_chgvs = '{0}:c.1A>T'.format(gene['name'][1])
         data = {
             'variant_chgvs': urllib.parse.quote(variant_chgvs),
             'caller': 'cli',
@@ -94,18 +94,21 @@ def main():
                 j += 1
                 log('WARNING', 'variant creation failed for gene {0} with error {1}'.format(gene['name'], md_response['mobidetails_error']))
                 new_nm_match_obj = re.search(
-                    r'A more recent version of the selected reference sequence NM_\d+\.\d+ is available \((NM_\d+)\.(\d+)\)',
+                    r'A more recent version of the selected reference sequence NM_\d+\.\d+ is available \((NM_\d+\.\d+)\)',
                     md_response['mobidetails_error']
                 )
                 if new_nm_match_obj:
-                    nm_to_check = new_nm_match_obj.group(1)
-                    new_ver = new_nm_match_obj.group(2)
-                    if nm_to_check == gene['name'][1]:
-                        curs.execute(
-                            "UPDATE gene SET nm_version = '{0}' WHERE name[2] = '{1}'".format(new_ver, gene['name'][1])
-                        )
+                    nm_to_add = new_nm_match_obj.group(1)
+                    # should create a new transcript HERE
+
+
+                    # new_ver = new_nm_match_obj.group(2)
+                    # if nm_to_check == gene['name'][1]:
+                    #     curs.execute(
+                    #         "UPDATE gene SET nm_version = '{0}' WHERE name[2] = '{1}'".format(new_ver, gene['name'][1])
+                    #     )
                     # recheck
-                    data['variant_chgvs'] = '{0}.{1}:c.1A>T'.format(gene['name'][1], new_ver)
+                    # data['variant_chgvs'] = '{0}.{1}:c.1A>T'.format(gene['name'][1], new_ver)
                     # md_url_2 = '{0}/api/variant/create/{1}/{2}'.format(remote_addr, variant_2, api_key)
                     try:
                         md_response_2 = json.loads(http.request('POST', md_url, headers=md_utilities.api_agent, fields=data).data.decode('utf-8'))
@@ -134,7 +137,7 @@ def main():
                         "UPDATE gene SET variant_creation = 'mapping_default' WHERE name[2] = '{}'".format(gene['name'][1])
                     )
                     log('INFO', 'MD gene table updated with variant_creation = mapping_default')
-                
+
             elif 'mobidetails_id' in md_response and gene['variant_creation'] != 'ok':
                 curs.execute(
                     "UPDATE gene SET variant_creation = 'ok' WHERE name[2] = '{}'".format(gene['name'][1])

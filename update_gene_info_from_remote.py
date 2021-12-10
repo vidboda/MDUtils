@@ -17,7 +17,7 @@ from MobiDetailsApp import config
 
 
 def log(level, text):
-    localtime = time.asctime( time.localtime(time.time()) )
+    localtime = time.asctime(time.localtime(time.time()))
     if level == 'ERROR':
         sys.exit('[{0}]: {1} - {2}'.format(level, localtime, text))
     print('[{0}]: {1} - {2}'.format(level, localtime, text))
@@ -36,14 +36,14 @@ def main():
                         help='Optionally update UNIPROT IDs', action='store_true')
     parser.add_argument('-uc', '--update-creation', default='', required=False,
                         help='Optionally update variant_creation tag', action='store_true')
-    parser.add_argument('-un', '--update-nm', default='', required=False,
-                        help='Optionally update RefSeq NM accession number tag', action='store_true')
+    # parser.add_argument('-un', '--update-nm', default='', required=False,
+    #                     help='Optionally update RefSeq NM accession number tag', action='store_true')
     parser.add_argument('-npf', '--update-np-full', default='', required=False,
                         help='Optionally update NP for all genes', action='store_true')
     parser.add_argument('-ue', '--update-exons', default='', required=False,
                         help='Optionally update number of exons for all genes', action='store_true')
-    parser.add_argument('-ugn', '--update-gene-names', default='', required=False,
-                        help='Optionally update HGNC gene names for all genes', action='store_true')
+    parser.add_argument('-ugn', '--update-gene-symbols', default='', required=False,
+                        help='Optionally update HGNC gene symbols for all genes', action='store_true')
 
     args = parser.parse_args()
     remote_addr = args.remote_server
@@ -141,7 +141,7 @@ def main():
                     if 'RefProtein' in api_response[keys] and \
                             api_response[keys]['RefProtein'] != 'NP_000000.0':
                         if re.search(r'NP_\d+\.\d+', api_response[keys]['RefProtein']):
-                            match_obj = re.search(r'(NM_\d+)\.\d+', keys)
+                            match_obj = re.search(r'(NM_\d+\.\d+)', keys)
                             nm_acc = match_obj.group(1)
                             np_acc = api_response[keys]['RefProtein']
                             curs.execute(
@@ -152,45 +152,37 @@ def main():
                             j += 1
         db.commit()
         log('INFO', '{} NP acc no modified'.format(j))
-    if args.update_uniprot or args.update_creation or args.update_nm or args.update_np_full or args.update_exons or args.update_gene_names:
+    if args.update_uniprot or args.update_creation or args.update_nm or args.update_np_full or args.update_exons or args.update_gene_symbols:
         curs.execute(
-            "SELECT  name[1] as HGNC, name[2] as nm, nm_version, np, uniprot_id, variant_creation FROM gene ORDER BY name"
+            "SELECT  name[1] as hgnc, name[2] as nm, np, uniprot_id, variant_creation FROM gene ORDER BY name"
         )
         res = curs.fetchall()
-        k = l = m = n = p = q = r = 0
+        k = n = m = p = q = r = 0
         o = curs.rowcount
         for gene in res:
             req_url = '{0}/api/gene/{1}'.format(remote_addr, gene['hgnc'])
             api_response = json.loads(http.request('GET', req_url, headers=header).data.decode('utf-8'))
-            l += 1
-            if l % 1000 == 0:
+            n += 1
+            if n % 1000 == 0:
                 log('INFO', '{0}/{1} isoforms checked'.format(l, o))
             for keys in api_response:
-                if 'HGNC Name' in api_response[keys] and args.update_gene_names:
-                    gene_name = api_response[keys]['HGNC Name']
-                    if gene_name != gene['prot_name']:
-                        curs.execute(
-                            "UPDATE gene set prot_name = %s WHERE name[2] = %s",
-                            (gene_name, nm_acc)
-                        )
-                        log('INFO', 'Updating gene name of {0} to {1}'.format(nm_acc, ungene_nameiprot))
-                        r += 1
-                match_obj = re.search(r'^(NM_\d+)\.(\d+)$', keys)
+                match_obj = re.search(r'^(NM_\d+\.\d+)$', keys)
                 if match_obj:
                     nm_acc = match_obj.group(1)
                     # check again
                     if nm_acc == gene['nm']:
-                        if args.update_nm:
-                            nm_version = match_obj.group(2)
-                            # log('DEBUG', '{0}dev:{1}-prod:{2}'.format(gene['hgnc'], int(nm_version), int(gene['nm_version'])))
-                            if int(nm_version) != int(gene['nm_version']):
-                                # no downgrade? y => downgrade
-                                curs.execute(
-                                    "UPDATE gene set nm_version = %s WHERE name[2] = %s",
-                                    (nm_version, nm_acc)
-                                )
-                                log('INFO', 'Updating gene RefSeq NM accession version of {0} from {1} to {2}'.format(nm_acc, gene['nm_version'], nm_version))
-                                n += 1
+                        # MDv1
+                        # if args.update_nm:
+                        #     nm_version = match_obj.group(2)
+                        #     # log('DEBUG', '{0}dev:{1}-prod:{2}'.format(gene['hgnc'], int(nm_version), int(gene['nm_version'])))
+                        #     if int(nm_version) != int(gene['nm_version']):
+                        #         # no downgrade? y => downgrade
+                        #         curs.execute(
+                        #             "UPDATE gene set nm_version = %s WHERE name[2] = %s",
+                        #             (nm_version, nm_acc)
+                        #         )
+                        #         log('INFO', 'Updating gene RefSeq NM accession version of {0} from {1} to {2}'.format(nm_acc, gene['nm_version'], nm_version))
+                        #         n += 1
                         if 'UNIPROT' in api_response[keys] and args.update_uniprot:
                             uniprot = api_response[keys]['UNIPROT']
                             if uniprot != gene['uniprot_id']:
@@ -228,10 +220,10 @@ def main():
                                 log('INFO', 'Updating gene total exons of {0} to {1}'.format(nm_acc, exons))
                                 q += 1
         db.commit()
-        
+
         log('INFO', '{} UNIPROT IDs modified'.format(k))
         log('INFO', '{} variantCreationTag modified'.format(m))
-        log('INFO', '{} RefSeq NM accession version modified'.format(n))
+        # log('INFO', '{} RefSeq NM accession version modified'.format(n))
         log('INFO', '{} NP version modified'.format(p))
         log('INFO', '{} Exons number modified'.format(q))
         log('INFO', '{} Gene names modified'.format(r))

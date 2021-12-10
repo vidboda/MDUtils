@@ -21,6 +21,7 @@ def log(level, text):
         sys.exit('[{0}]: {1} - {2}'.format(level, localtime, text))
     print('[{0}]: {1} - {2}'.format(level, localtime, text))
 
+
 def main():
     parser = argparse.ArgumentParser(description='Check isoforms differences between 2 DBs',
                                      usage='python check_isoforms_differences.py -k md_api_key -nk ncbi_api_key')
@@ -30,15 +31,15 @@ def main():
                         help='NCBI Entrez API key.')
     parser.add_argument('-md', '--diff-md', default='', required=False,
                         help='Check differences between MD Dev and Prod', action='store_true')
-    parser.add_argument('-ncbi', '--diff-ncbi', default='', required=False,
-                        help='Check differences between NCBI RefSeq and MD', action='store_true')
-    ncbi_api_key = None
+    # parser.add_argument('-ncbi', '--diff-ncbi', default='', required=False,
+    #                     help='Check differences between NCBI RefSeq and MD', action='store_true')
+    # ncbi_api_key = None
     args = parser.parse_args()
-    if args.ncbi_api_key is not None:
-        if not re.search(r'\w+', args.ncbi_api_key):
-            log('ERROR', 'Invalid NCBI API key, please check')
-        else:
-            ncbi_api_key = args.ncbi_api_key
+    # if args.ncbi_api_key is not None:
+    #     if not re.search(r'\w+', args.ncbi_api_key):
+    #         log('ERROR', 'Invalid NCBI API key, please check')
+    #     else:
+    #         ncbi_api_key = args.ncbi_api_key
     # get db connector and cursor
     db = get_db()
     curs = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
@@ -57,7 +58,7 @@ def main():
             log('ERROR', 'Unknown API key')
         username = res_user['username']
         log('INFO', 'User: {}'.format(username))
-    
+
     db = get_db()
     curs = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
     if args.diff_md:
@@ -65,14 +66,14 @@ def main():
         diff = {}
         # get genes w/ more than one isoform
         curs.execute(
-            "SELECT name[1] AS hgnc, name[2] AS nm, nm_version FROM gene WHERE canonical = 't' AND name[1] IN (SELECT name[1] FROM gene GROUP BY name[1] HAVING COUNT(name[1]) > 1) ORDER by name[1]"
+            "SELECT name[1] AS hgnc, name[2] AS nm FROM gene WHERE canonical = 't' AND name[1] IN (SELECT name[1] FROM gene GROUP BY name[1] HAVING COUNT(name[1]) > 1) ORDER by name[1]"
         )
         res = curs.fetchall()
         i = 0
         for gene in res:
             i += 1
             log('INFO', 'Treating gene {0} - #{1}'.format(gene['hgnc'], i))
-            full_nm = '{0}.{1}'.format(gene['nm'], gene['nm_version'])
+            full_nm = gene['nm']
             base_url = "http://10.34.20.79"
             md_url = '{0}/MD/api/gene/{1}'.format(base_url, gene['hgnc'])
             http = urllib3.PoolManager(cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())
@@ -110,6 +111,7 @@ def main():
                         log('INFO', 'Variants update returned value for {0}: {1}'.format(gene['hgnc'], returned_value))
         pp = pprint.PrettyPrinter(indent=4)
         pp.pprint(diff)
+
 
 if __name__ == '__main__':
     main()

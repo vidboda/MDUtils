@@ -57,7 +57,7 @@ def main():
         'Accept': 'application/json',
         'User-Agent': 'python-requests Python/{}.{}.{}'.format(sys.version_info[0], sys.version_info[1], sys.version_info[2]),
     }
-        
+
     print()
     log('INFO', 'Working on server {0} with format {1}'.format(md_base_url, input_format))
 
@@ -68,39 +68,39 @@ def main():
         if variant != '':
             match_obj = None
             if input_format == 'transcript':
-                match_obj = re.search(r'^(NM_\d+)\.(\d{1,2}):(c\..+)$', variant)
+                match_obj = re.search(r'^(NM_\d+\.\d{1,2}):(c\..+)$', variant)
             if input_format == 'genomic':
                 match_obj = re.search(r'^([Nn][Cc]_\d+\.\d{1,2}:g\.[\dATGCagctdelinsup_>]+);(.+)$', variant)
             if match_obj is not None:
-                # check if RefSeq accession number and version is suitable for variant creation:
+                # # check if RefSeq accession number and version is suitable for variant creation:
                 if input_format == 'transcript':
                     acc_number = match_obj.group(1)
-                    acc_version = match_obj.group(2)
-                    var = match_obj.group(3)
-                    md_url_check = '{0}/api/gene/{1}'.format(md_base_url, match_obj.group(1))
-                    try:
-                        md_check_response = json.loads(http.request('GET', md_url_check, headers=header).data.decode('utf-8'))
-                        for flag in md_check_response:
-                            match_response = re.search(r'(NM_\d+)\.(\d)', flag)
-                            if match_response and \
-                                    match_response.group(2) != acc_version and \
-                                    match_response.group(1) == acc_number:
-                                # get correct accession version
-                                acc_version = match_response.group(2)
-                    except Exception:
-                        log('WARNING', 'RefSeq accession number {} is not available in MobiDetails'.format(match_obj.group(1)))
-                        next
+                    #     # acc_version = match_obj.group(2)
+                    #     var = match_obj.group(3)
+                    #     md_url_check = '{0}/api/gene/{1}'.format(md_base_url, match_obj.group(1))
+                    #     try:
+                    #         md_check_response = json.loads(http.request('GET', md_url_check, headers=header).data.decode('utf-8'))
+                    #         for flag in md_check_response:
+                    #             match_response = re.search(r'(NM_\d+\.\d)', flag)
+                    #             if match_response and \
+                    #                     match_response.group(1) == acc_number:
+                    #                 # match_response.group(2) != acc_version and \
+                    #                 # get correct accession version
+                    #                 # acc_version = match_response.group(2)
+                    # except Exception:
+                    #     log('WARNING', 'RefSeq accession number {} is not available in MobiDetails'.format(match_obj.group(1)))
+                    #     next
 
                     # md_url = '{0}/api/variant/create/{1}/{2}'.format(md_base_url, variant, api_key)
                     # md_url = '{0}/api/variant/create/{1}.{2}:{3}/{4}'.format(md_base_url, urllib.parse.quote(acc_number), urllib.parse.quote(acc_version), urllib.parse.quote(var), api_key)
                     md_url = '{0}/api/variant/create'.format(md_base_url)
                     data = {
-                        'variant_chgvs': urllib.parse.quote('{0}.{1}:{2}'.format(acc_number, acc_version, var)),
+                        'variant_chgvs': urllib.parse.quote('{0}:{1}'.format(acc_number, var)),
                         'caller': 'cli',
                         'api_key': api_key
                     }
-                    log('INFO', 'Submitting variant {0}.{1}:{2} to MobiDetails: {3}'.format(acc_number, acc_version, var, md_url))
-    
+                    log('INFO', 'Submitting variant {0}:{1} to MobiDetails: {2}'.format(acc_number, var, md_url))
+
                     try:
                         # md_response = json.loads(http.request('GET', md_url, headers=header).data.decode('utf-8'))
                         md_response = json.loads(http.request('POST', md_url, headers=header, fields=data).data.decode('utf-8'))
@@ -113,14 +113,14 @@ def main():
                     md_url_check = '{0}/api/gene/{1}'.format(md_base_url, gene)
                     semaph = 'no'
                     # print(md_url_check)
-                    #try:
+                    # try:
                     md_check_response = json.loads(http.request('GET', md_url_check, headers=header).data.decode('utf-8'))
                     for flag in md_check_response:
                         if flag == 'HGNC Name':
                             semaph = 'yes'
                             continue
                     # print(md_check_response)
-                    #except Exception:
+                    # except Exception:
                     #    log('WARNING', 'The gene {} could not be checked for some reason in MobiDetails'.format(gene))
                     if semaph == 'yes':
                         # md_url = '{0}/api/variant/create_g/{1}/{2}/cli/{3}'.format(md_base_url, g_var, gene, api_key)

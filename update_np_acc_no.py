@@ -49,8 +49,8 @@ def main():
             # ncbi
             ncbi_url = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&id={0}&api_key={1}'.format(acc['name'][1], ncbi_api_key)
             eutils_response = http.request('GET', ncbi_url).data.decode('utf-8')
-            if re.search(r'accession\s"NP_\d+",\s+version\s\d$', eutils_response, re.MULTILINE):
-                match_object = re.search(r'accession\s"(NP_\d+)",\s+version\s(\d+)$', eutils_response, re.MULTILINE)
+            match_object = re.search(r'accession\s"(NP_\d+)",\s+version\s(\d+)$', eutils_response, re.MULTILINE)
+            if match_object:
                 curs.execute(
                     "UPDATE gene SET np = '{0}.{1}' WHERE name[2] = '{2}'".format(match_object.group(1), match_object.group(2), acc['name'][1])
                 )

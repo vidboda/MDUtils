@@ -12,7 +12,7 @@ from MobiDetailsApp import config
 
 
 def log(level, text):
-    localtime = time.asctime( time.localtime(time.time()) )
+    localtime = time.asctime(time.localtime(time.time()))
     if level == 'ERROR':
         sys.exit('[{0}]: {1} - {2}'.format(level, localtime, text))
     print('[{0}]: {1} - {2}'.format(level, localtime, text))

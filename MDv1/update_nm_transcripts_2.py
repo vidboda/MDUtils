@@ -26,7 +26,7 @@ def main():
     # to be ran after uta docker update for example
     # uses VV API genes2transcript
     # https://rest.variantvalidator.org/VariantValidator/tools/gene2transcripts/NM_130786?content-type=application%2Fjson
-    #vv_url_base = "https://rest.variantvalidator.org"
+    # vv_url_base = "https://rest.variantvalidator.org"
     vv_url_base = "https://www608.lamp.le.ac.uk"
     # vv_url_base = "http://0.0.0.0:8000/"
 
@@ -112,7 +112,6 @@ def main():
                         indent=4
                     )
                 log('INFO', "VV JSON file replaced for gene {0}-{1}".format(gene['name'][0], gene['name'][1]))
-
 
             # TODO if file exists check md5 and if it's different, update the file - and all the associated variants?????
         # check gene name

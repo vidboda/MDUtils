@@ -10,29 +10,29 @@ import datetime
 import json
 from insert_genes import get_db
 # requires MobiDetails config module + database.ini file
-from MobiDetailsApp import config
+from MobiDetailsApp import config, md_utilities
 
 
 def log(level, text):
-    localtime = time.asctime( time.localtime(time.time()) )
+    localtime = time.asctime(time.localtime(time.time()))
     if level == 'ERROR':
         sys.exit('[{0}]: {1} - {2}'.format(level, localtime, text))
     print('[{0}]: {1} - {2}'.format(level, localtime, text))
 
 
-def compute_start_end_pos(name):
-    match_object = re.search(r'(\d+)_(\d+)[di]', name)
-    if match_object is not None:
-        return match_object.group(1), match_object.group(2)
-    else:
-        match_object = re.search(r'^(\d+)[ATGC][>=]', name)
-        if match_object is not None:
-            return match_object.group(1), match_object.group(1)
-        else:
-            # single nt del or delins
-            match_object = re.search(r'^(\d+)[d]', name)
-            if match_object is not None:
-                return match_object.group(1), match_object.group(1)
+# def compute_start_end_pos(name):
+#     match_object = re.search(r'(\d+)_(\d+)[di]', name)
+#     if match_object is not None:
+#         return match_object.group(1), match_object.group(2)
+#     else:
+#         match_object = re.search(r'^(\d+)[ATGC][>=]', name)
+#         if match_object is not None:
+#             return match_object.group(1), match_object.group(1)
+#         else:
+#             # single nt del or delins
+#             match_object = re.search(r'^(\d+)[d]', name)
+#             if match_object is not None:
+#                 return match_object.group(1), match_object.group(1)
 
 
 def main():
@@ -73,14 +73,14 @@ def main():
     )
     # check if gene exists and get new canonical isoform
     curs.execute(
-        "SELECT DISTINCT(name[2]) as nm, nm_version FROM gene WHERE name[1] = %s AND canonical = 't'",
+        "SELECT DISTINCT(name[2]) as nm FROM gene WHERE name[1] = %s AND canonical = 't'",
         (gene_name,)
     )
     res = curs.fetchone()
     if res is None:
         log('ERROR', 'The gene {} is not present in MobiDetails, please check it'.format(gene_name))
     nm = res['nm']
-    nm_full = '{0}.{1}'.format(res['nm'], res['nm_version'])
+    # nm_full = res['nm']
     # get all variants
     curs.execute(
         "SELECT a.chr, a.pos, a.pos_ref, a.pos_alt, a.g_name, b.c_name, b.id FROM variant a, variant_feature b WHERE a.feature_id = b.id AND b.gene_name[1] = %s AND b.gene_name[2] != %s AND a.genome_version = 'hg38' ORDER BY a.pos",
@@ -99,10 +99,10 @@ def main():
             vv_data = json.loads(http.request('GET', vv_url).data.decode('utf-8'))
             # log('DEBUG', vv_data)
         except Exception:
-                log('WARNING', 'No VV result for {0}:{1}'.format(nm_full, var['c_name']))
+                log('WARNING', 'No VV result for {0}:{1}'.format(nm, var['c_name']))
                 continue
         for first_level_key in vv_data:
-            match_obj = re.search('{}:c\.(.+)$'.format(nm_full), first_level_key)
+            match_obj = re.search(r'{}:c\.(.+)$'.format(nm), first_level_key)
             if match_obj:
                 new_c_name = match_obj.group(1)
                 log('DEBUG', 'Old c_name: {0} - New c_name: {1}'.format(var['c_name'], new_c_name))
@@ -122,7 +122,7 @@ def main():
                         # log('DEBUG', vv_data[first_level_key]['hgvs_predicted_protein_consequence'])
                         if 'tlr' in vv_data[first_level_key]['hgvs_predicted_protein_consequence']:
                             # log('DEBUG', vv_data[first_level_key]['hgvs_predicted_protein_consequence']['tlr'])
-                            match_object = re.search('NP_\d+\.\d.*:p\.\(?(.+)\)?', vv_data[first_level_key]['hgvs_predicted_protein_consequence']['tlr'])
+                            match_object = re.search(r'NP_\d+\.\d.*:p\.\(?(.+)\)?', vv_data[first_level_key]['hgvs_predicted_protein_consequence']['tlr'])
                             if match_object:
                                 p_name = match_object.group(1)
                                 if re.search(r'\)$', p_name):
@@ -136,46 +136,13 @@ def main():
                         log('WARNING', 'No hgvs_predicted_protein_consequence in VV results')
                     start_segment_type = start_segment_number = end_segment_type = end_segment_number = ivs_name = None
                     # get segments type and number
-                    positions = compute_start_end_pos(var['g_name'])
+                    positions = md_utilities.compute_start_end_pos(var['g_name'])
+                    ncbi_chr = md_utilities.get_ncbi_chr_name(db, 'chr{}'.format(var['chr']), 'hg38')
+                    start_segment_type = md_utilities.get_segment_type_from_vv(vv_data[first_level_key]['variant_exonic_positions'][ncbi_chr[0]]['start_exon'])
+                    start_segment_number = md_utilities.get_segment_number_from_vv(vv_data[first_level_key]['variant_exonic_positions'][ncbi_chr[0]]['start_exon'])
+                    end_segment_type = md_utilities.get_segment_type_from_vv(vv_data[first_level_key]['variant_exonic_positions'][ncbi_chr[0]]['end_exon'])
+                    end_segment_number = md_utilities.get_segment_number_from_vv(vv_data[first_level_key]['variant_exonic_positions'][ncbi_chr[0]]['end_exon'])
                     if positions[0] != positions[1]:
-                        curs.execute(
-                            "SELECT number, type FROM segment WHERE genome_version = 'hg38' AND \
-                            gene_name[1] = %s AND gene_name[2] = %s AND %s BETWEEN SYMMETRIC segment_start \
-                            AND segment_end AND %s BETWEEN SYMMETRIC segment_start AND segment_end",
-                            (gene_name, nm, positions[0], positions[1])
-                        )
-                        res_seg = curs.fetchone()
-                        if res_seg is not None:
-                            # start - end in same segment
-                            start_segment_type = res_seg['type']
-                            start_segment_number = res_seg['number']
-                            end_segment_type = res_seg['type']
-                            end_segment_number = res_seg['number']
-                        else:
-                            curs.execute(
-                                "SELECT number, type FROM segment WHERE genome_version = 'hg38' \
-                                AND gene_name[1] = %s AND gene_name[2] = %s AND %s \
-                                BETWEEN SYMMETRIC segment_start AND segment_end ",
-                                (gene_name, nm, positions[0])
-                            )
-                            res_seg1 = curs.fetchone()
-                            curs.execute(
-                                "SELECT number, type FROM segment WHERE genome_version = 'hg38' \
-                                AND gene_name[1] = %s AND gene_name[2] = %s AND %s \
-                                BETWEEN SYMMETRIC segment_start AND segment_end ",
-                                (gene_name, nm, positions[1])
-                            )
-                            res_seg2 = curs.fetchone()
-                            if res_strand['strand'] == '+':
-                                start_segment_type = res_seg1['type']
-                                start_segment_number = res_seg1['number']
-                                end_segment_type = res_seg2['type']
-                                end_segment_number = res_seg2['number']
-                            else:
-                                start_segment_type = res_seg2['type']
-                                start_segment_number = res_seg2['number']
-                                end_segment_type = res_seg1['type']
-                                end_segment_number = res_seg1['number']
                         # get IVS name
                         if start_segment_type == 'intron':
                             ivs_obj = re.search(r'^\d+([\+-]\d+)_\d+([\+-]\d+)(.+)$', new_c_name)
@@ -200,17 +167,6 @@ def main():
                                         )
                     else:
                         # substitutions
-                        curs.execute(
-                            "SELECT number, type FROM segment WHERE genome_version = 'hg38' \
-                            AND gene_name[1] = %s AND gene_name[2] = %s AND %s \
-                            BETWEEN SYMMETRIC segment_start AND segment_end ",
-                            (gene_name, nm, positions[0])
-                        )
-                        res_seg = curs.fetchone()
-                        start_segment_type = res_seg['type']
-                        start_segment_number = res_seg['number']
-                        end_segment_type = res_seg['type']
-                        end_segment_number = res_seg['number']
                         if start_segment_type == 'intron':
                             ivs_obj = re.search(r'^[\*-]?\d+([\+-]\d+)(.+)$', new_c_name)
                             ivs_name = 'IVS{0}{1}{2}'.format(
@@ -240,6 +196,7 @@ def main():
                     log('INFO', 'Variant {0} updated to {1}'.format(var['c_name'], new_c_name))
 
     db.commit()
+
 
 if __name__ == '__main__':
     main()

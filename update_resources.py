@@ -156,7 +156,7 @@ def main():
     match_obj = None
     if args.clinvar:
         # get_new_resource_file(resource_type, resources_dir, regexp, label, url, target_path, suffix, http object)
-        get_new_ncbi_resource_file(http, 'clinvar', '{}clinvar/hg38/'.format(resources_path), 'clinvar_(\d+)', 'ClinVar', clinvar_url, '.vcf')
+        get_new_ncbi_resource_file(http, 'clinvar', '{}clinvar/hg38/'.format(resources_path), r'clinvar_(\d+)', 'ClinVar', clinvar_url, '.vcf')
 
     if args.dbsnp:
         # get dbsnp version from https://ftp.ncbi.nih.gov/snp/latest_release/release_notes.txt
@@ -177,10 +177,10 @@ def main():
                     semaph = 1
                 # os.mkdir('{0}/dbsnp/v{1}'.format(resources_path, dbsnp_version))
             else:
-                log('ERROR', 'Unable to donwload/read dbSNP release file from: '.format('{}release_notes.txt'.format(dbsnp_url)))
+                log('ERROR', 'Unable to donwload/read dbSNP release file from {}release_notes.txt'.format(dbsnp_url)))
             if semaph == 0:
                 # we can proceed
-                get_new_ncbi_resource_file(http, 'GCF', '{0}dbsnp/hg38/v{1}/'.format(resources_path, dbsnp_version), 'GCF_(\d+)', 'dbSNP', '{0}VCF/'.format(dbsnp_url), '.38')
+                get_new_ncbi_resource_file(http, 'GCF', '{0}dbsnp/hg38/v{1}/'.format(resources_path, dbsnp_version), r'GCF_(\d+)', 'dbSNP', '{0}VCF/'.format(dbsnp_url), '.38')
 
 
 if __name__ == '__main__':
