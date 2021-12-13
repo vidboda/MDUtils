@@ -8,7 +8,7 @@ import psycopg2
 import psycopg2.extras
 import time
 import hashlib
-from insert_genes import get_db
+from precompute_spipv2 import get_db
 # requires MobiDetails config module + database.ini file
 from MobiDetailsApp import config, md_utilities
 
@@ -31,14 +31,32 @@ def main():
     # - run the update_genes_from_remote.py script from the prod server
     # uses VV API genes2transcript
     # https://rest.variantvalidator.org/VariantValidator/tools/gene2transcripts/NM_130786?content-type=application%2Fjson
-    # vv_url_base = "https://rest.variantvalidator.org"
-    vv_url_base = "https://www608.lamp.le.ac.uk"
+    vv_url_base = "https://rest.variantvalidator.org"
+    # vv_url_base = "https://www608.lamp.le.ac.uk"
     # vv_url_base = "http://0.0.0.0:8000/"
+    # should begin with a HGNC file instead of all genes already recorded in MD
+    # hgnc file in resources/hgnc/hgnc_complete_set.txt
+    # beginning of line example
+    # HGNC:24086      A1CF    APOBEC1 complementation factor  protein-coding gene     gene with protein product       Approved
+    # so we need id [0].split(':')[1], symbol [1], and validation [3] = protein-coding gene and [5] = Approved
+    hgnc_file = open(md_utilities.local_files['hgnc_full_set']['abs_path'], 'r')
+    for line in hgnc_file:
+        gene_info = re.split('\t', line)
+        match_id = re.search(r'HGNC:(\d+)', gene_info[0])
+        if match_id:
+        hgnc_id = match_id.group(1)
+        if gene_info[4] == 'protein-coding gene' and \
+                gene_info[5] == 'Approved':
+            # suitable for MD
+            # check ID VS MD
+            # if ok, check current symbol and change it if needed
+            # else download file from VV and insert new gene and transcript
+            # seems a little bit hard  - a separate script?
 
     db = get_db()
     curs = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
-    curs.execute(  # get genes - one transcript per gene (canonical) - allows upadte of all trasncripts
-        "SELECT name, second_name, prot_name, prot_short, np, chr, number_of_exons, ng, hgnc_id, strand, uniprot_id FROM gene WHERE canonical = 't' AND (name[1] like 'T%' OR name[1] like 'U%' OR name[1] like 'V%' OR name[1] like 'W%' OR name[1] like 'X%' OR name[1] like 'Y%' OR name[1] like 'Z%') ORDER by name[1]"  # " ORDER BY random()"
+    curs.execute(  # get genes - one transcript per gene (canonical) - allows update of all trasncripts
+        "SELECT name, second_name, prot_name, prot_short, np, chr, number_of_exons, ng, hgnc_id, strand, uniprot_id FROM gene WHERE canonical = 't' ORDER by name[1]"  # " ORDER BY random()"
     )
     #  WHERE canonical = 't'
     genes = curs.fetchall()
