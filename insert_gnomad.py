@@ -3,17 +3,7 @@ import os
 import argparse
 import psycopg2
 import psycopg2.extras
-import time
-from precompute_spipv2 import get_db
-# requires MobiDetails config module + database.ini file
-from MobiDetailsApp import config
-
-
-def log(level, text):
-    localtime = time.asctime( time.localtime(time.time()) )
-    if level == 'ERROR':
-        sys.exit('[{0}]: {1} - {2}'.format(level, localtime, text))
-    print('[{0}]: {1} - {2}'.format(level, localtime, text))
+from precompute_spipv2 import get_db, log
 
 
 def main():

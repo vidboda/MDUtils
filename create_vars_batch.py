@@ -13,7 +13,7 @@ import urllib.parse
 
 
 def log(level, text):
-    localtime = time.asctime( time.localtime(time.time()) )
+    localtime = time.asctime(time.localtime(time.time()))
     if level == 'ERROR':
         sys.exit('[{0}]: {1} - {2}'.format(level, localtime, text))
     print('[{0}]: {1} - {2}'.format(level, localtime, text))
@@ -50,9 +50,8 @@ def main():
         md_base_url = args.url
     input_format = 'transcript'
     if args.format and \
-           args.format == 'genomic':
+            args.format == 'genomic':
         input_format = 'genomic'
-    #headers
     header = {
         'Accept': 'application/json',
         'User-Agent': 'python-requests Python/{}.{}.{}'.format(sys.version_info[0], sys.version_info[1], sys.version_info[2]),
@@ -75,24 +74,7 @@ def main():
                 # # check if RefSeq accession number and version is suitable for variant creation:
                 if input_format == 'transcript':
                     acc_number = match_obj.group(1)
-                    #     # acc_version = match_obj.group(2)
-                    #     var = match_obj.group(3)
-                    #     md_url_check = '{0}/api/gene/{1}'.format(md_base_url, match_obj.group(1))
-                    #     try:
-                    #         md_check_response = json.loads(http.request('GET', md_url_check, headers=header).data.decode('utf-8'))
-                    #         for flag in md_check_response:
-                    #             match_response = re.search(r'(NM_\d+\.\d)', flag)
-                    #             if match_response and \
-                    #                     match_response.group(1) == acc_number:
-                    #                 # match_response.group(2) != acc_version and \
-                    #                 # get correct accession version
-                    #                 # acc_version = match_response.group(2)
-                    # except Exception:
-                    #     log('WARNING', 'RefSeq accession number {} is not available in MobiDetails'.format(match_obj.group(1)))
-                    #     next
-
-                    # md_url = '{0}/api/variant/create/{1}/{2}'.format(md_base_url, variant, api_key)
-                    # md_url = '{0}/api/variant/create/{1}.{2}:{3}/{4}'.format(md_base_url, urllib.parse.quote(acc_number), urllib.parse.quote(acc_version), urllib.parse.quote(var), api_key)
+                    var = match_obj.group(2)
                     md_url = '{0}/api/variant/create'.format(md_base_url)
                     data = {
                         'variant_chgvs': urllib.parse.quote('{0}:{1}'.format(acc_number, var)),
@@ -143,7 +125,7 @@ def main():
                 log('INFO', md_response)
                 print()
             else:
-                 log('ERROR', "the format {} does not seem to fit with your file. If you choose the transcript format, you file whould be of type: NM_XXXXX.Y:c.HGVScdna, one variant per line, and if the format is 'genomic', your file should look like NC_XXXXXX.Y:g.HGVChg38genomic;HGNCgeneName".format(input_format))
+                log('ERROR', "the format {} does not seem to fit with your file. If you choose the transcript format, you file whould be of type: NM_XXXXX.Y:c.HGVScdna, one variant per line, and if the format is 'genomic', your file should look like NC_XXXXXX.Y:g.HGVChg38genomic;HGNCgeneName".format(input_format))
 
 
 if __name__ == '__main__':

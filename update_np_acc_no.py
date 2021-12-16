@@ -6,11 +6,10 @@ import psycopg2.extras
 import urllib3
 import certifi
 from insert_genes import get_db
-import psycopg2.extras
-# requires MobiDetails config module + database.ini file
-from MobiDetailsApp import config
+
 
 # update genes for which np acc no is NP_000000.0
+# Still useful?????????
 
 
 def log(level, text):

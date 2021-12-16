@@ -8,31 +8,9 @@ import certifi
 import time
 import datetime
 import json
-from insert_genes import get_db
+from precompute_spipv2 import get_db, log
 # requires MobiDetails config module + database.ini file
-from MobiDetailsApp import config, md_utilities
-
-
-def log(level, text):
-    localtime = time.asctime(time.localtime(time.time()))
-    if level == 'ERROR':
-        sys.exit('[{0}]: {1} - {2}'.format(level, localtime, text))
-    print('[{0}]: {1} - {2}'.format(level, localtime, text))
-
-
-# def compute_start_end_pos(name):
-#     match_object = re.search(r'(\d+)_(\d+)[di]', name)
-#     if match_object is not None:
-#         return match_object.group(1), match_object.group(2)
-#     else:
-#         match_object = re.search(r'^(\d+)[ATGC][>=]', name)
-#         if match_object is not None:
-#             return match_object.group(1), match_object.group(1)
-#         else:
-#             # single nt del or delins
-#             match_object = re.search(r'^(\d+)[d]', name)
-#             if match_object is not None:
-#                 return match_object.group(1), match_object.group(1)
+from MobiDetailsApp import md_utilities
 
 
 def main():
@@ -61,7 +39,7 @@ def main():
             log('ERROR', 'Unknown API key')
         username = res_user['username']
         log('INFO', 'User: {}'.format(username))
-    match_obj = re.search('^([\w-]+)$', args.gene_name)
+    match_obj = re.search(r'^([\w-]+)$', args.gene_name)
     if match_obj:
         gene_name = match_obj.group(1)
     else:

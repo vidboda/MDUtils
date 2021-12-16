@@ -3,21 +3,11 @@ import re
 import argparse
 import psycopg2
 import psycopg2.extras
-import time
 import tabix
-from insert_genes import get_db
-# requires MobiDetails config module + database.ini file
-from MobiDetailsApp import config
+from precompute_spipv2 import get_db, log
 
 # script meant to be ran manually after a change in dbSNP version
 # will update rsids for old variants w/ no rsids - should be ran on prod server
-
-
-def log(level, text):
-    localtime = time.asctime( time.localtime(time.time()) )
-    if level == 'ERROR':
-        sys.exit('[{0}]: {1} - {2}'.format(level, localtime, text))
-    print('[{0}]: {1} - {2}'.format(level, localtime, text))
 
 
 def main():

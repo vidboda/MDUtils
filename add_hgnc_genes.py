@@ -1,25 +1,11 @@
-import os
-import sys
 import re
-import urllib3
-import certifi
 import json
 import psycopg2
 import psycopg2.extras
-import time
-import hashlib
-from precompute_spipv2 import get_db
+from precompute_spipv2 import get_db, log
 # requires MobiDetails config module + database.ini file
-from MobiDetailsApp import config, md_utilities
-from check_transcripts_in_vvjson import download_vv_file, log
-
-
-# def log(level, text):
-#     print()
-#     localtime = time.asctime(time.localtime(time.time()))
-#     if level == 'ERROR':
-#         sys.exit('[{0}]: {1} - {2}'.format(level, localtime, text))
-#     print('[{0}]: {1} - {2}'.format(level, localtime, text))
+from MobiDetailsApp import md_utilities
+from check_transcripts_in_vvjson import download_vv_file
 
 
 def main():

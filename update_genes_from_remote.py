@@ -6,20 +6,20 @@ import psycopg2.extras
 import urllib3
 import certifi
 import json
-import time
-from insert_genes import get_db
+# import time
+from precompute_spipv2.py import get_db, log
 # requires MobiDetails config module + database.ini file
-from MobiDetailsApp import config, md_utilities
+from MobiDetailsApp import md_utilities
 
 # update genes from dev MDAPI on prod after a vv transcript update on the dev
 # see update_md_transcripts.py script for details
 
 
-def log(level, text):
-    localtime = time.asctime(time.localtime(time.time()))
-    if level == 'ERROR':
-        sys.exit('[{0}]: {1} - {2}'.format(level, localtime, text))
-    print('[{0}]: {1} - {2}'.format(level, localtime, text))
+# def log(level, text):
+#     localtime = time.asctime(time.localtime(time.time()))
+#     if level == 'ERROR':
+#         sys.exit('[{0}]: {1} - {2}'.format(level, localtime, text))
+#     print('[{0}]: {1} - {2}'.format(level, localtime, text))
 
 
 def main():
@@ -47,9 +47,9 @@ def main():
     # get db connector and cursor
     db = get_db()
     curs = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
-    # get local list of genes with no canonical isoform defined
+    # get local list of genes
     curs.execute(
-        "SELECT DISTINCT(name[1]), second_name, chr, hgnc_id, ng, strand as gene_symbol FROM gene ORDER BY name[1]"
+        "SELECT DISTINCT(name[1]), second_name, chr, hgnc_id, ng, strand, hgnc_name as gene_symbol FROM gene ORDER BY name[1]"
     )
     genes = curs.fetchall()
     count = curs.rowcount
@@ -70,10 +70,13 @@ def main():
             if key == 'Chr':
                 if api_response[key] != gene['chr']:
                     update_sql_gene += ' chr = {0} '.format(api_response[key])
-            if key == 'HGNC ID':
+            if key == 'HGNCID':
                 if api_response[key] != gene['hgnc_id']:
                     update_sql_gene += ' hgnc_id = {0} '.format(api_response[key])
-            if key == 'HGNC Symbol':
+            if key == 'HGNCName':
+                if api_response[key] != gene['hgnc_name']:
+                    update_sql_gene += ' hgnc_name = {0} '.format(api_response[key])
+            if key == 'HGNCSymbol':
                 if api_response[key] != gene['name'][0]:
                     update_sql_gene += ' name[1] = {0} '.format(api_response[key])
             if key == 'RefGene':
@@ -109,6 +112,9 @@ def main():
                     if key == 'UNIPROT':
                         if api_response[key] != prod_nm['uniprot_id']:
                             update_sql_transcript += ' uniprot_id = {0} '.format(api_response[key])
+                    if key == 'proteinSize':
+                        if api_response[key] != prod_nm['prot_size']:
+                            update_sql_transcript += ' prot_size = {0} '.format(api_response[key])
                     if key == 'canonical':
                         if api_response[key] != prod_nm['canonical']:
                             update_sql_transcript += ' canonical = {0} '.format(api_response[key])
@@ -132,22 +138,22 @@ def main():
                         # db.commit()
                 else:
                     # get prot size from eutils
-                    ncbi_url = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=protein&id={0}&rettype=gp&complexity=3&api_key={1}'.format(api_response['RefProtein'], ncbi_api_key)
-                    prot_size = 'NULL'
-                    try:
-                        eutils_response = http.request('GET', ncbi_url).data.decode('utf-8')
-                        # log('DEBUG', eutils_response)
-                        prot_match = re.search(r'Protein\s+1\.\.(\d+)', eutils_response)  # Protein\s+1\.\.(\d+)$
-                        if prot_match:
-                            # log('DEBUG', 'ouhou')
-                            prot_size = prot_match.group(1)
-                    except Exception:
-                        log('WARNING', 'no protein size w/ eutils NP acc no {0}, eutils URL:{1}'.format(gene['np'], ncbi_url))
-                    insert_prot_size = gene['prot_size']
-                    if prot_size != 'NULL':
-                        insert_prot_size = prot_size
+                    # ncbi_url = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=protein&id={0}&rettype=gp&complexity=3&api_key={1}'.format(api_response['RefProtein'], ncbi_api_key)
+                    # prot_size = 'NULL'
+                    # try:
+                    #     eutils_response = http.request('GET', ncbi_url).data.decode('utf-8')
+                    #     # log('DEBUG', eutils_response)
+                    #     prot_match = re.search(r'Protein\s+1\.\.(\d+)', eutils_response)  # Protein\s+1\.\.(\d+)$
+                    #     if prot_match:
+                    #         # log('DEBUG', 'ouhou')
+                    #         prot_size = prot_match.group(1)
+                    # except Exception:
+                    #     log('WARNING', 'no protein size w/ eutils NP acc no {0}, eutils URL:{1}'.format(gene['np'], ncbi_url))
+                    # insert_prot_size = gene['prot_size']
+                    # if prot_size != 'NULL':
+                    #     insert_prot_size = prot_size
                     # insert
-                    insert_gene = "INSERT INTO gene (name, second_name, chr, strand, number_of_exons, prot_name, prot_size, uniprot_id, ng, np, enst, ensp, canonical, variant_creation, hgnc_id ) VALUES ('{{\"{0}\",\"{1}\"}}', '{2}', '{3}', '{4}', {5}, '{6}', {7}, '{8}', '{9}', '{10}', '{11}', '{12}', '{13}', '{14}', {15})".format(
+                    insert_gene = "INSERT INTO gene (name, second_name, chr, strand, number_of_exons, hgnc_name, prot_size, uniprot_id, ng, np, enst, ensp, canonical, variant_creation, hgnc_id ) VALUES ('{{\"{0}\",\"{1}\"}}', '{2}', '{3}', '{4}', {5}, '{6}', {7}, '{8}', '{9}', '{10}', '{11}', '{12}', '{13}', '{14}', {15})".format(
                         api_response['HGNCSymbol'],
                         nm_obj,
                         gene['second_name'],
@@ -155,7 +161,7 @@ def main():
                         api_response['Strand'],
                         api_response['numberOfExons'],
                         api_response['HGNCName'],
-                        insert_prot_size,
+                        api_response['proteinSize'],
                         api_response['UNIPROT'],
                         api_response['RefGene'],
                         api_response['RefProtein'],

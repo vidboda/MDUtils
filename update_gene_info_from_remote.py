@@ -6,21 +6,12 @@ import psycopg2.extras
 import urllib3
 import certifi
 import json
-import time
-from insert_genes import get_db
-# requires MobiDetails config module + database.ini file
-from MobiDetailsApp import config
+from insert_genes import get_db, log
 
-# fix genes in database did not have canonical transcripts.
+
+# fix genes in database that do not have canonical transcripts.
 # fix from remote MD server which has the information (typically dev server), using the API
 # fix UNIPORT IDs, using the MDAPI and Uniprot API
-
-
-def log(level, text):
-    localtime = time.asctime(time.localtime(time.time()))
-    if level == 'ERROR':
-        sys.exit('[{0}]: {1} - {2}'.format(level, localtime, text))
-    print('[{0}]: {1} - {2}'.format(level, localtime, text))
 
 
 def main():
@@ -50,8 +41,6 @@ def main():
     # args = parser.parse_args(['-np'])
     print()
     log('INFO', 'Working with server {}'.format(remote_addr))
-
-    #headers
     header = {
         'Accept': 'application/json',
         'User-Agent': 'python-requests Python/{}.{}.{}'.format(sys.version_info[0], sys.version_info[1], sys.version_info[2]),
@@ -164,7 +153,7 @@ def main():
             api_response = json.loads(http.request('GET', req_url, headers=header).data.decode('utf-8'))
             n += 1
             if n % 1000 == 0:
-                log('INFO', '{0}/{1} isoforms checked'.format(l, o))
+                log('INFO', '{0}/{1} isoforms checked'.format(n, o))
             for keys in api_response:
                 match_obj = re.search(r'^(NM_\d+\.\d+)$', keys)
                 if match_obj:

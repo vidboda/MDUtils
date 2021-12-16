@@ -1,18 +1,14 @@
-import os
-import sys
-import re
 import json
 import psycopg2
 import psycopg2.extras
-import time
 from precompute_spipv2 import get_db, log
 # requires MobiDetails config module + database.ini file
-from MobiDetailsApp import config, md_utilities
+from MobiDetailsApp import md_utilities
 
 
 # script to set MD canonical to MANE or refseqSelect if no mane?
 def update_canonical(gene_symbol, transcript, curs, db):
-    curs.execute(
+    # curs.execute(
     #     "UPDATE gene set canonical = 'f' WHERE gene_name[1] = %s",
     #     (gene_symbol,)
     # )
@@ -22,6 +18,7 @@ def update_canonical(gene_symbol, transcript, curs, db):
     # )
     # db.commit()
     log('INFO', 'Changed canonical of {0} to {1}'.format(gene_symbol, transcript))
+
 
 def main():
     db = get_db()

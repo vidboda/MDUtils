@@ -6,21 +6,9 @@ import argparse
 import urllib3
 import certifi
 import json
-import time
-from insert_genes import get_db
-import psycopg2.extras
-# requires MobiDetails config module + database.ini file
-from MobiDetailsApp import config
-
+from precompute_spipv2 import get_db, log
 
 # check UNIPROT IDs
-
-def log(level, text):
-    print()
-    localtime = time.asctime(time.localtime(time.time()))
-    if level == 'ERROR':
-        sys.exit('[{0}]: {1} - {2}'.format(level, localtime, text))
-    print('[{0}]: {1} - {2}'.format(level, localtime, text))
 
 
 def main():

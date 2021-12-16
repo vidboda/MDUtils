@@ -2,12 +2,9 @@ import os
 import urllib3
 from MobiDetailsApp import config, md_utilities
 
+# script to test VV API and get current URL for VV
+# david 20210217
 
-
-##################################
-## script to test VV API and get current URL for VV
-## david 20210217
-##################################
 
 main():
     http = urllib3.PoolManager(cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())

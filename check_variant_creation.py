@@ -1,5 +1,4 @@
 import re
-import sys
 import argparse
 import psycopg2
 import psycopg2.extras
@@ -7,21 +6,11 @@ import urllib3
 import urllib
 import certifi
 import json
-# import time
 from precompute_spipv2 import get_db, log
-# requires MobiDetails config module + database.ini file
-from MobiDetailsApp import config, md_utilities
+from MobiDetailsApp import md_utilities
 
-# removes all c.1A>T then checks that these variants can be created in genes using API
+# removes all c.2del then checks that these variants can be created in genes using API
 # to be used on private dev server
-
-
-# def log(level, text):
-#     print()
-#     localtime = time.asctime( time.localtime(time.time()) )
-#     if level == 'ERROR':
-#         sys.exit('[{0}]: {1} - {2}'.format(level, localtime, text))
-#     print('[{0}]: {1} - {2}'.format(level, localtime, text))
 
 
 def main():
