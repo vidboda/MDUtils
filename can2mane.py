@@ -46,7 +46,6 @@ def main():
         except IOError:
             no_vv_file = 1
         if no_vv_file == 0:
-            transcript_road_signs = {}
             vv_json = json.load(json_file)
             transcript_checked = 0
             for vv_transcript in vv_json['transcripts']:
@@ -55,7 +54,7 @@ def main():
                 for md_transcript in transcripts:
                     # need to check vv isoforms against MD isoforms to keep only relevant ones
                     if vv_transcript['reference'] == md_transcript['name'][1]:
-                        # MANE and canonical => pass
+                        # MANE and canonical
                         if vv_transcript['annotations']['mane_select'] is True and \
                                 md_transcript['canonical'] is True:
                             transcript_checked = 1  # ends 1st loop
@@ -73,13 +72,6 @@ def main():
                             update_canonical(gene['name'][0], md_transcript['name'][1], curs, db)
                             break
                             # we end only the 1st loop, in case there is a MANE <> refseqSelect (should not be possible, just in case)
-                        transcript_road_signs[gene['name'][1]] = {
-                            'mane_select': vv_transcript['annotations']['mane_select'],
-                            'mane_plus_clinical': vv_transcript['annotations']['mane_plus_clinical'],
-                            'refseq_select': vv_transcript['annotations']['refseq_select']
-                        }
-
-            # print(transcript_road_signs)
         else:
             log('WARNING', 'No VV file for {0}'.format(gene['name'][1]))
 
