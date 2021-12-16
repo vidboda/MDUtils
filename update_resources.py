@@ -177,7 +177,7 @@ def main():
                     semaph = 1
                 # os.mkdir('{0}/dbsnp/v{1}'.format(resources_path, dbsnp_version))
             else:
-                log('ERROR', 'Unable to donwload/read dbSNP release file from {}release_notes.txt'.format(dbsnp_url)))
+                log('ERROR', 'Unable to donwload/read dbSNP release file from {}release_notes.txt'.format(dbsnp_url))
             if semaph == 0:
                 # we can proceed
                 get_new_ncbi_resource_file(http, 'GCF', '{0}dbsnp/hg38/v{1}/'.format(resources_path, dbsnp_version), r'GCF_(\d+)', 'dbSNP', '{0}VCF/'.format(dbsnp_url), '.38')
