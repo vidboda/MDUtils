@@ -6,21 +6,21 @@ import certifi
 import psycopg2
 import psycopg2.extras
 import time
-from precompute_spipv2 import get_db
+from precompute_spipv2 import get_db, log
 # requires MobiDetails config module + database.ini file
 from MobiDetailsApp import config, md_utilities
 
 # Script to check whether the transcripts recorded in MD are present in VV json files
 # If a transcript is deactivated and found in a new file, becomes ok
-# can be croned each month or each VVTA update
+# can be with each each VVTA update
 
 
-def log(level, text):
-    print()
-    localtime = time.asctime(time.localtime(time.time()))
-    if level == 'ERROR':
-        sys.exit('[{0}]: {1} - {2}'.format(level, localtime, text))
-    print('[{0}]: {1} - {2}'.format(level, localtime, text))
+# def log(level, text):
+#     print()
+#     localtime = time.asctime(time.localtime(time.time()))
+#     if level == 'ERROR':
+#         sys.exit('[{0}]: {1} - {2}'.format(level, localtime, text))
+#     print('[{0}]: {1} - {2}'.format(level, localtime, text))
 
 
 def download_vv_file(gene, transcript):
