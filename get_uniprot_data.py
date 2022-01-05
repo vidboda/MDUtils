@@ -79,10 +79,11 @@ def main():
                 encoding='utf-8'
             )
             gff_file.write(uniprot_response)
-        for line in open('{0}{1}.gff'.format(
-            md_utilities.local_files['uniprot']['abs_path'],
-            id
-        )).readlines():
+        # for line in open('{0}{1}.gff'.format(
+        #     md_utilities.local_files['uniprot']['abs_path'],
+        #     id
+        # )).readlines():
+        for line in open('/data/MobiDetails/resources/uniprot/{0}.gff'.format(id)).readlines():
             # get domain info
             if re.search(rf'^{id}\t', line):
                 info = re.split('\t', line)
