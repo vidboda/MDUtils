@@ -58,46 +58,31 @@ def main():
             db.commit()
         uniprot_url = 'https://www.uniprot.org/uniprot/{0}.gff'.format(id)
         # log('DEBUG', 'URL: {0}'.format(uniprot_url))
-        try:
-            uniprot_response = http.request('GET', uniprot_url, headers=header).data.decode('utf-8')
-        except Exception:
-            log('WARNING', 'No value for {0}'.format(id))
-            continue
         if not os.path.isfile(
-            '/data/MobiDetails/resources/uniprot/{0}.gff'.format(
+            '{0}{1}.gff'.format(
+                md_utilities.local_files['uniprot']['abs_path'],
                 id
             )
                 ):
+            try:
+                uniprot_response = http.request('GET', uniprot_url, headers=header).data.decode('utf-8')
+            except Exception:
+                log('WARNING', 'No value for {0}'.format(id))
+                continue
             # copy in file system
             gff_file = open(
-                '/data/MobiDetails/resources/uniprot/{0}.gff'.format(
+                '{0}{1}.gff'.format(
+                    md_utilities.local_files['uniprot']['abs_path'],
                     id
                 ),
                 "w",
                 encoding='utf-8'
             )
             gff_file.write(uniprot_response)
-        # if not os.path.isfile(
-        #     '{0}{1}.gff'.format(
-        #         md_utilities.local_files['uniprot']['abs_path'],
-        #         id
-        #     )
-        #         ):
-        #     # copy in file system
-        #     gff_file = open(
-        #         '{0}{1}.gff'.format(
-        #             md_utilities.local_files['uniprot']['abs_path'],
-        #             id
-        #         ),
-        #         "w",
-        #         encoding='utf-8'
-        #     )
-        #     gff_file.write(uniprot_response)
-        # for line in open('{0}{1}.gff'.format(
-        #     md_utilities.local_files['uniprot']['abs_path'],
-        #     id
-        # )).readlines():
-        for line in open('/data/MobiDetails/resources/uniprot/{0}.gff'.format(id)).readlines():
+        for line in open('{0}{1}.gff'.format(
+            md_utilities.local_files['uniprot']['abs_path'],
+            id
+        )).readlines():
             # get domain info
             if re.search(rf'^{id}\t', line):
                 info = re.split('\t', line)
