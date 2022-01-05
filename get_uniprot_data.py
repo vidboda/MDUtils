@@ -64,21 +64,35 @@ def main():
             log('WARNING', 'No value for {0}'.format(id))
             continue
         if not os.path.isfile(
-            '{0}{1}.json'.format(
-                md_utilities.local_files['uniprot']['abs_path'],
+            '/data/MobiDetails/resources/uniprot/{0}.gff'.format(
                 id
             )
                 ):
             # copy in file system
             gff_file = open(
-                '{0}{1}.gff'.format(
-                    md_utilities.local_files['uniprot']['abs_path'],
+                '/data/MobiDetails/resources/uniprot/{0}.gff'.format(
                     id
                 ),
                 "w",
                 encoding='utf-8'
             )
             gff_file.write(uniprot_response)
+        # if not os.path.isfile(
+        #     '{0}{1}.gff'.format(
+        #         md_utilities.local_files['uniprot']['abs_path'],
+        #         id
+        #     )
+        #         ):
+        #     # copy in file system
+        #     gff_file = open(
+        #         '{0}{1}.gff'.format(
+        #             md_utilities.local_files['uniprot']['abs_path'],
+        #             id
+        #         ),
+        #         "w",
+        #         encoding='utf-8'
+        #     )
+        #     gff_file.write(uniprot_response)
         # for line in open('{0}{1}.gff'.format(
         #     md_utilities.local_files['uniprot']['abs_path'],
         #     id
