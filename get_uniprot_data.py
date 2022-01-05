@@ -106,7 +106,7 @@ def main():
                     name = re.split('=', re.split(';', info[8])[0])[1]
                     # exists?
                     curs.execute(
-                        "SELECT name FORM uniprot_domain WHERE uniprot_id = %s AND name = %s AND aa_start = %s",
+                        "SELECT name FROM uniprot_domain WHERE uniprot_id = %s AND name = %s AND aa_start = %s",
                         (
                             id,
                             name,
