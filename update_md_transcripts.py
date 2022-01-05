@@ -6,6 +6,7 @@ import json
 import psycopg2
 import psycopg2.extras
 import hashlib
+import argparse
 from precompute_spipv2 import get_db, log
 from MobiDetailsApp import md_utilities
 
@@ -23,17 +24,37 @@ def main():
     # vv_url_base = "https://rest.variantvalidator.org"
     vv_url_base = "https://www608.lamp.le.ac.uk"
 
+    parser = argparse.ArgumentParser(description='Update MD gene files from VV', usage='python update_md_transcripts.py.py [-f path/to/dir/containing/genes/file.txt]')
+    parser.add_argument('-f', '--file', default='', required=False, help='Path to the genes file to be updated')
+    args = parser.parse_args()
+    # get sql file list
+    gene_file = None
+    gene_list = ''
+    if args.file and \
+            os.path.isfile(args.file):
+        gene_file = args.file
+        for line in open(gene_file).readlines():
+            gene_list += "'{0}', ".format(line.rstrip())
+        gene_list = gene_list[:-2]
+    elif args.file:
+        log('ERROR', 'Invalid input path for gene file, please check your command')
     db = get_db()
     curs = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
-    curs.execute(  # get genes - one transcript per gene (canonical) - allows update of all trasncripts
-        "SELECT name, second_name, hgnc_name, np, chr, number_of_exons, ng, hgnc_id, strand, uniprot_id FROM gene WHERE canonical = 't' ORDER by name[1]"  # " ORDER BY random()"
-    )
-    #  WHERE canonical = 't'
+    if not gene_file:
+        curs.execute(  # get genes - one transcript per gene (canonical) - allows update of all trasncripts
+            "SELECT name, second_name, hgnc_name, np, chr, number_of_exons, ng, hgnc_id, strand, uniprot_id FROM gene WHERE canonical = 't' ORDER by name[1]"  # " ORDER BY random()"
+        )
+        #  WHERE canonical = 't'
+    else:
+        log('INFO', 'The following genes will be considered {0}'.format(gene_list))
+        curs.execute(  # get genes - one transcript per gene (canonical) - allows update of all trasncripts from the list
+            "SELECT name, second_name, hgnc_name, np, chr, number_of_exons, ng, hgnc_id, strand, uniprot_id FROM gene WHERE canonical = 't' AND name[1] IN ({0}) ORDER by name[1]".format(gene_list)  # " ORDER BY random()"
+        )
     genes = curs.fetchall()
     count = curs.rowcount
     i = 0
     for gene in genes:
-        # log('DEBUG', '{}-{}'.format(gene['name'][0], i))
+        log('DEBUG', '{}-{}'.format(gene['name'][0], i))
         i += 1
         if i % 500 == 0:
             log('INFO', '{0}/{1} genes checked'.format(i, count))
@@ -57,8 +78,37 @@ def main():
             vv_data = json.loads(http.request('GET', vv_url).data.decode('utf-8'))
         except Exception:
             log('WARNING', 'No value for {0}'.format(gene['name'][0]))
+            # disable in MD
+            curs.execute(
+                "UPDATE gene SET variant_creation = 'not_in_vv_json' WHERE name[1] = %s",
+                (gene['name'][0],)
+            )
+            db.commit()
             continue
         # Store json file in /mobidic_resources/variantValidator/genes/
+        if 'error' in vv_data:
+            log('WARNING', 'VV error for gene {0}'.format(gene['name'][0]))
+            # try querying by HGNC symbol instead of refseq
+            vv_url = "{0}/VariantValidator/tools/gene2transcripts/{1}?content-type=application/json".format(vv_url_base, gene['name'][0])
+            # log('DEBUG', 'Calling VariantValidator gene API: {}'.format(vv_url))
+            try:
+                vv_data = json.loads(http.request('GET', vv_url).data.decode('utf-8'))
+            except Exception:
+                log('WARNING', 'No value for {0}'.format(gene['name'][0]))
+                # disable in MD
+                curs.execute(
+                    "UPDATE gene SET variant_creation = 'not_in_vv_json' WHERE name[1] = %s",
+                    (gene['name'][0],)
+                )
+                db.commit()
+                continue
+            if 'error' in vv_data:
+                curs.execute(
+                    "UPDATE gene SET variant_creation = 'not_in_vv_json' WHERE name[1] = %s",
+                    (gene['name'][0],)
+                )
+                db.commit()
+                continue
         if not os.path.isfile(
             '{0}{1}.json'.format(
                 md_utilities.local_files['variant_validator']['abs_path'],

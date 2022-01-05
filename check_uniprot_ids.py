@@ -58,9 +58,23 @@ def main():
                             # print('INFO: RefSeq: {0} - {1} - {2} OK'.format(gene['np'], gene['name'][1], gene['name'][0]))
                             pass
                         else:
+                            # known id?
+                            curs.execute(
+                                "SELECT id FROM uniprot WHERE id = %s",
+                                (uniprot_response[0]['accession'],)
+                            )
+                            res_id = curs.fetchone()
+                            if not res_id:
+                                # insetr value
+                                curs.execute(
+                                    "INSERT INTO uniprot (id) VALUES (%s)",
+                                    (uniprot_response[0]['accession'],)
+                                )
+                                db.commit()
                             curs.execute(
                                 "UPDATE gene SET uniprot_id = '{0}' WHERE name[2] = '{1}'".format(uniprot_response[0]['accession'], gene['name'][1])
                             )
+                            db.commit()
                             # print("UPDATE gene SET uniprot_id = '{0}' WHERE name[2] = '{1}'".format(uniprot_response[0]['accession'], gene['name'][1]))
                             log('WARNING', 'Updated gene UNIPROT ID of {0} - {1} from {2} to {3}'.format(
                                 gene['name'][0],
@@ -96,15 +110,16 @@ def main():
                         prot_match = re.search(r'Protein\s+1\.\.(\d+)', eutils_response)  # Protein\s+1\.\.(\d+)$
                         if prot_match:
                             # log('DEBUG', 'ouhou')
-                            prot_size = prot_match.group(1)
+                            # prot size here seems to include stop codon
+                            prot_size = int(prot_match.group(1))-1
                             # log('DEBUG', prot_size)
                     except Exception:
                         log('WARNING', 'no protein size w/ eutils NP acc no {0}, eutils URL:{1}'.format(gene['np'], ncbi_url))
                     # log('DEBUG', prot_size)
                 if int(prot_size) != -1 and \
                         ((gene['prot_size'] is not None and
-                        int(prot_size) != int(gene['prot_size'])) or
-                        gene['prot_size'] is None):
+                            int(prot_size) != int(gene['prot_size'])) or
+                            gene['prot_size'] is None):
                     curs.execute(
                         "UPDATE gene SET prot_size = '{0}' WHERE name[2] = '{1}'".format(prot_size, gene['name'][1])
                     )
