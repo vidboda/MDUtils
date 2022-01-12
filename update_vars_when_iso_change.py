@@ -31,7 +31,11 @@ def main():
         api_key = args.api_key
         # user
         curs.execute(
-            "SELECT username FROM mobiuser WHERE api_key = %s",
+            """
+            SELECT username
+            FROM mobiuser
+            WHERE api_key = %s
+            """,
             (api_key,)
         )
         res_user = curs.fetchone()
@@ -51,7 +55,12 @@ def main():
     )
     # check if gene exists and get new canonical isoform
     curs.execute(
-        "SELECT DISTINCT(name[2]) as nm FROM gene WHERE name[1] = %s AND canonical = 't'",
+        """
+        SELECT DISTINCT(name[2]) AS nm
+        FROM gene
+        WHERE name[1] = %s
+            AND canonical = 't'
+        """,
         (gene_name,)
     )
     res = curs.fetchone()
@@ -61,7 +70,21 @@ def main():
     # nm_full = res['nm']
     # get all variants
     curs.execute(
-        "SELECT a.chr, a.pos, a.pos_ref, a.pos_alt, a.g_name, b.c_name, b.id FROM variant a, variant_feature b WHERE a.feature_id = b.id AND b.gene_name[1] = %s AND b.gene_name[2] != %s AND a.genome_version = 'hg38' ORDER BY a.pos",
+        """
+        SELECT a.chr,
+            a.pos,
+            a.pos_ref,
+            a.pos_alt,
+            a.g_name,
+            b.c_name,
+            b.id
+        FROM variant a, variant_feature b
+        WHERE a.feature_id = b.id
+            AND b.gene_name[1] = %s
+            AND b.gene_name[2] != %s
+            AND a.genome_version = 'hg38'
+        ORDER BY a.pos
+        """,
         (gene_name, nm)
     )
     res = curs.fetchall()
@@ -86,8 +109,11 @@ def main():
                 log('DEBUG', 'Old c_name: {0} - New c_name: {1}'.format(var['c_name'], new_c_name))
                 if new_c_name == var['c_name']:
                     curs.execute(
-                        "UPDATE variant_feature SET gene_name[2] = %s, \
-                            creation_date = %s WHERE id = %s",
+                        """
+                        UPDATE variant_feature
+                        SET gene_name[2] = %s, creation_date = %s
+                        WHERE id = %s
+                        """,
                         (nm, creation_date, var['id'])
                     )
                     log('INFO', 'Variant {} remains unchanged'.format(var['c_name']))
@@ -159,16 +185,35 @@ def main():
                         continue
                     if ivs_name is None:
                         curs.execute(
-                            "UPDATE variant_feature SET gene_name[2] = %s, c_name = %s, p_name = %s, start_segment_type = %s, \
-                            start_segment_number = %s, end_segment_type = %s, end_segment_number = %s, \
-                            creation_date = %s WHERE id = %s",
+                            """
+                            UPDATE variant_feature
+                            SET gene_name[2] = %s,
+                                c_name = %s,
+                                p_name = %s,
+                                start_segment_type = %s,
+                                start_segment_number = %s,
+                                end_segment_type = %s,
+                                end_segment_number = %s,
+                                creation_date = %s
+                            WHERE id = %s
+                            """,
                             (nm, new_c_name, p_name, start_segment_type, start_segment_number, end_segment_type, end_segment_number, creation_date, var['id'])
                         )
                     else:
                         curs.execute(
-                            "UPDATE variant_feature SET gene_name[2] = %s, c_name = %s, p_name = %s, ivs_name = %s, start_segment_type = %s, \
-                            start_segment_number = %s, end_segment_type = %s, end_segment_number = %s, \
-                            creation_date = %s WHERE id = %s",
+                            """"
+                            UPDATE variant_feature
+                            SET gene_name[2] = %s,
+                                c_name = %s,
+                                p_name = %s,
+                                ivs_name = %s,
+                                start_segment_type = %s,
+                                start_segment_number = %s,
+                                end_segment_type = %s,
+                                end_segment_number = %s,
+                                creation_date = %s
+                            WHERE id = %s
+                            """,
                             (nm, new_c_name, p_name, ivs_name, start_segment_type, start_segment_number, end_segment_type, end_segment_number, creation_date, var['id'])
                         )
                     log('INFO', 'Variant {0} updated to {1}'.format(var['c_name'], new_c_name))

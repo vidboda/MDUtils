@@ -50,7 +50,16 @@ def main():
     curs = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
     # get local list of genes with no canonical isoform defined
     curs.execute(
-        "SELECT DISTINCT(name[1]) as hgnc FROM gene WHERE name[1] NOT IN (SELECT name[1] FROM gene WHERE canonical='t') ORDER BY name[1]"
+        """
+        SELECT DISTINCT(name[1]) AS hgnc
+        FROM gene
+        WHERE name[1] NOT IN (
+                SELECT name[1]
+                FROM gene
+                WHERE canonical='t'
+            )
+        ORDER BY name[1]
+        """
     )
     no_can = curs.fetchall()
 
@@ -84,8 +93,21 @@ def main():
     if args.update_can_all:
         # get genes with no variants and at least 2 isoforms to see if we need to update canonical
         curs.execute(
-            "SELECT name, canonical FROM gene WHERE (name[1] NOT IN (SELECT gene_name[1] FROM variant_feature)) \
-            AND (name[1] IN (SELECT name[1] FROM gene GROUP BY name[1] HAVING COUNT (name[1]) > 1)) ORDER BY name"
+            """
+            SELECT name, canonical
+            FROM gene
+            WHERE (name[1] NOT IN (
+                SELECT gene_name[1]
+                FROM variant_feature
+                ))
+                AND (name[1] IN (
+                    SELECT name[1]
+                    FROM gene
+                    GROUP BY name[1]
+                    HAVING COUNT (name[1]) > 1)
+                )
+            ORDER BY name
+            """
         )
         res = curs.fetchall()
         for acc in res:
@@ -101,12 +123,20 @@ def main():
                             # double check
                             if nm_acc == acc['name'][1]:
                                 curs.execute(
-                                    "UPDATE gene SET canonical = 'f' WHERE name[1] = %s",
+                                    """
+                                    UPDATE gene
+                                    SET canonical = 'f'
+                                    WHERE name[1] = %s
+                                    """,
                                     (acc['name'][0],)
                                 )
                                 # log('INFO', "UPDATE gene SET canonical = 'f' WHERE name[1] = '{}'".format(acc['name'][0]))
                                 curs.execute(
-                                    "UPDATE gene SET canonical = 't' WHERE name[2] = %s",
+                                    """
+                                    UPDATE gene
+                                    SET canonical = 't'
+                                    WHERE name[2] = %s
+                                    """,
                                     (acc['name'][1],)
                                 )
                                 # log('INFO', "UPDATE gene SET canonical = 't' WHERE name[2] = '{}'".format(acc['name'][1]))
@@ -118,7 +148,11 @@ def main():
 
     if args.update_np:
         curs.execute(
-            "SELECT DISTINCT(name[1]) as hgnc FROM gene WHERE np = 'NP_000000.0'"
+            """
+            SELECT DISTINCT(name[1]) AS hgnc
+            FROM gene
+            WHERE np = 'NP_000000.0'
+            """
         )
         no_np = curs.fetchall()
         j = 0
@@ -143,7 +177,11 @@ def main():
         log('INFO', '{} NP acc no modified'.format(j))
     if args.update_uniprot or args.update_creation or args.update_nm or args.update_np_full or args.update_exons or args.update_gene_symbols:
         curs.execute(
-            "SELECT  name[1] as hgnc, name[2] as nm, np, uniprot_id, variant_creation FROM gene ORDER BY name"
+            """
+            SELECT  name[1] aASs hgnc, name[2] AS nm, np, uniprot_id, variant_creation
+            FROM gene
+            ORDER BY name
+            """
         )
         res = curs.fetchall()
         k = n = m = p = q = r = 0
@@ -176,7 +214,11 @@ def main():
                             uniprot = api_response[keys]['UNIPROT']
                             if uniprot != gene['uniprot_id']:
                                 curs.execute(
-                                    "UPDATE gene set uniprot_id = %s WHERE name[2] = %s",
+                                    """
+                                    UPDATE gene
+                                    SET uniprot_id = %s
+                                    WHERE name[2] = %s
+                                    """,
                                     (uniprot, nm_acc)
                                 )
                                 log('INFO', 'Updating gene UNIPROT id of {0} to {1}'.format(nm_acc, uniprot))
@@ -185,7 +227,11 @@ def main():
                             tag = api_response[keys]['variantCreationTag']
                             if tag != gene['variant_creation']:
                                 curs.execute(
-                                    "UPDATE gene set variant_creation = %s WHERE name[2] = %s",
+                                    """
+                                    UPDATE gene
+                                    SET variant_creation = %s
+                                    WHERE name[2] = %s
+                                    """,
                                     (tag, nm_acc)
                                 )
                                 log('INFO', 'Updating gene variantCreationTag of {0} to {1}'.format(nm_acc, tag))
@@ -194,7 +240,11 @@ def main():
                             np = api_response[keys]['RefProtein']
                             if np != gene['np']:
                                 curs.execute(
-                                    "UPDATE gene set np = %s WHERE name[2] = %s",
+                                    """
+                                    UPDATE gene
+                                    SET np = %s
+                                    WHERE name[2] = %s
+                                    """,
                                     (np, nm_acc)
                                 )
                                 log('INFO', 'Updating gene np of {0} to {1}'.format(nm_acc, np))
@@ -203,7 +253,11 @@ def main():
                             exons = api_response[keys]['total exons']
                             if exons != gene['number_of_exons']:
                                 curs.execute(
-                                    "UPDATE gene set number_of_exons = %s WHERE name[2] = %s",
+                                    """
+                                    UPDATE gene
+                                    SET number_of_exons = %s
+                                    WHERE name[2] = %s
+                                    """,
                                     (exons, nm_acc)
                                 )
                                 log('INFO', 'Updating gene total exons of {0} to {1}'.format(nm_acc, exons))
@@ -216,6 +270,7 @@ def main():
         log('INFO', '{} NP version modified'.format(p))
         log('INFO', '{} Exons number modified'.format(q))
         log('INFO', '{} Gene names modified'.format(r))
+    db.close()
 
 
 if __name__ == '__main__':

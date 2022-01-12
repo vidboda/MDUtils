@@ -7,6 +7,7 @@ import urllib3
 import certifi
 import json
 from precompute_spipv2 import get_db, log
+from MobiDetailsApp import md_utilities
 
 # check UNIPROT IDs
 
@@ -14,7 +15,7 @@ from precompute_spipv2 import get_db, log
 def main():
     parser = argparse.ArgumentParser(description='Update UNIPROT ids and protein size',
                                      usage='python check_uniprot_ids.py [-k NCBI_API_KEY]')
-    parser.add_argument('-k', '--ncbi-api-key', default=None, required=False,
+    parser.add_argument('-k', '--ncbi-api-key', default=None, required=True,
                         help='NCBI Entrez API key. If not provided, 3rd method is not executed')
     args = parser.parse_args()
     ncbi_api_key = None
@@ -48,7 +49,7 @@ def main():
                 # log('DEBUG', gene['name'][0])
                 np = match_obj.group(1)
                 uniprot_url = 'https://www.ebi.ac.uk/proteins/api/proteins/refseq:{}?offset=0&size=100&reviewed=true'.format(np)
-                uniprot_response = json.loads(http.request('GET', uniprot_url, headers={'Accept': 'application/json'}).data.decode('utf-8'))
+                uniprot_response = json.loads(http.request('GET', uniprot_url, headers=md_utilities.api_agent).data.decode('utf-8'))
                 # print(uniprot_response[0]['accession'])
                 try:
                     if uniprot_response[0]['accession']:
@@ -60,19 +61,30 @@ def main():
                         else:
                             # known id?
                             curs.execute(
-                                "SELECT id FROM uniprot WHERE id = %s",
+                                """
+                                SELECT id
+                                FROM uniprot
+                                WHERE id = %s
+                                """,
                                 (uniprot_response[0]['accession'],)
                             )
                             res_id = curs.fetchone()
                             if not res_id:
                                 # insetr value
                                 curs.execute(
-                                    "INSERT INTO uniprot (id) VALUES (%s)",
+                                    """
+                                    INSERT INTO uniprot (id)
+                                    VALUES (%s)
+                                    """,
                                     (uniprot_response[0]['accession'],)
                                 )
                                 db.commit()
                             curs.execute(
-                                "UPDATE gene SET uniprot_id = '{0}' WHERE name[2] = '{1}'".format(uniprot_response[0]['accession'], gene['name'][1])
+                                """
+                                UPDATE gene
+                                SET uniprot_id = '{0}'
+                                WHERE name[2] = '{1}'
+                                """.format(uniprot_response[0]['accession'], gene['name'][1])
                             )
                             db.commit()
                             # print("UPDATE gene SET uniprot_id = '{0}' WHERE name[2] = '{1}'".format(uniprot_response[0]['accession'], gene['name'][1]))
@@ -97,7 +109,12 @@ def main():
                 prot_size = -1
                 # 1st check in MD
                 curs.execute(
-                    "SELECT prot_size FROM gene WHERE np = %s AND prot_size IS NOT NULL",
+                    """
+                    SELECT prot_size
+                    FROM gene
+                    WHERE np = %s
+                        AND prot_size IS NOT NULL
+                    """,
                     (gene['np'],)
                 )
                 res_size = curs.fetchone()
@@ -110,8 +127,7 @@ def main():
                         prot_match = re.search(r'Protein\s+1\.\.(\d+)', eutils_response)  # Protein\s+1\.\.(\d+)$
                         if prot_match:
                             # log('DEBUG', 'ouhou')
-                            # prot size here seems to include stop codon
-                            prot_size = int(prot_match.group(1))-1
+                            prot_size = int(prot_match.group(1))
                             # log('DEBUG', prot_size)
                     except Exception:
                         log('WARNING', 'no protein size w/ eutils NP acc no {0}, eutils URL:{1}'.format(gene['np'], ncbi_url))
@@ -121,7 +137,11 @@ def main():
                             int(prot_size) != int(gene['prot_size'])) or
                             gene['prot_size'] is None):
                     curs.execute(
-                        "UPDATE gene SET prot_size = '{0}' WHERE name[2] = '{1}'".format(prot_size, gene['name'][1])
+                        """
+                        UPDATE gene
+                        SET prot_size = '{0}'
+                        WHERE name[2] = '{1}'
+                        """.format(prot_size, gene['name'][1])
                     )
                     log('WARNING', 'Updated protein size for gene {0} - {1} - {2} to {3}'.format(
                         gene['name'][0],
@@ -136,7 +156,7 @@ def main():
     log('INFO', '{} isoforms updated'.format(i))
 
     db.commit()
-
+    db.close()
 
 if __name__ == '__main__':
     main()

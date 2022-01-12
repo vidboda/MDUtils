@@ -32,20 +32,31 @@ def main():
     # get db connector and cursor
     db = get_db()
     curs = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
-    curs.execute(
-       "DELETE FROM variant_feature WHERE c_name = '2del'"
-    )
-    db.commit()
+    # curs.execute(
+    #    """
+    #    DELETE FROM variant_feature
+    #    WHERE c_name = '2del'
+    #    """
+    # )
+    # db.commit()
     # # reinitialise gene state
     # curs.execute(
-    #    "UPDATE gene SET variant_creation = 'ok'"
+    #    """
+    #    UPDATE gene
+    #    SET variant_creation = 'ok'
+    #    """
     # )
     # db.commit()
 
     http = urllib3.PoolManager(cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())
 
     curs.execute(
-        "SELECT name, variant_creation FROM gene ORDER BY name"
+        """
+        SELECT name, variant_creation
+        FROM gene
+        WHERE variant_creation <> 'not_in_vv_json'
+        ORDER BY name
+        """
     )
     #  AND variant_creation IN ('hg19_mapping_default', 'hg38_mapping_default')
     transcripts = curs.fetchall()
@@ -71,80 +82,60 @@ def main():
         }
         # reinitialise gene state before query
         curs.execute(
-            "UPDATE gene SET variant_creation = 'ok' WHERE name[2] = %s",
+            """
+            UPDATE gene
+            SET variant_creation = 'ok'
+            WHERE name[2] = %s
+            """,
             (transcript['name'][1],)
         )
         db.commit()
         try:
             md_response = json.loads(http.request('POST', md_url, headers=md_utilities.api_agent, fields=data).data.decode('utf-8'))
-        # try:
-        #     md_response = json.loads(http.request('GET', md_url, headers={'Accept': 'application/json'}).data.decode('utf-8'))
-            if 'mobidetails_error' in md_response:
-                j += 1
-                log('WARNING', 'variant creation failed for gene {0} with error {1}'.format(gene['name'], md_response['mobidetails_error']))
-                # put back transcript state as it was
-                curs.execute(
-                    "UPDATE gene SET variant_creation = %s WHERE name[2] = %s",
-                    (transcript['variant_creation'], transcript['name'][1])
-                )
-                db.commit()
-                # MDv1 script version
-                # # new_nm_match_obj = re.search(
-                # #     r'A more recent version of the selected reference sequence NM_\d+\.\d+ is available \((NM_\d+\.\d+)\)',
-                # #     md_response['mobidetails_error']
-                # # )
-                # # if new_nm_match_obj:
-                # #     nm_to_add = new_nm_match_obj.group(1)
-                #     # should create a new transcript HERE
-                #
-                #
-                #     # new_ver = new_nm_match_obj.group(2)
-                #     # if nm_to_check == gene['name'][1]:
-                #     #     curs.execute(
-                #     #         "UPDATE gene SET nm_version = '{0}' WHERE name[2] = '{1}'".format(new_ver, gene['name'][1])
-                #     #     )
-                #     # recheck
-                #     # data['variant_chgvs'] = '{0}.{1}:c.1A>T'.format(gene['name'][1], new_ver)
-                #     # md_url_2 = '{0}/api/variant/create/{1}/{2}'.format(remote_addr, variant_2, api_key)
-                #     try:
-                #         md_response_2 = json.loads(http.request('POST', md_url, headers=md_utilities.api_agent, fields=data).data.decode('utf-8'))
-                #         # md_response_2 = json.loads(http.request('GET', md_url_2, headers={'Accept': 'application/json'}).data.decode('utf-8'))
-                #         if 'mobidetails_id' in md_response_2 and gene['variant_creation'] != 'ok':
-                #             curs.execute(
-                #                 "UPDATE gene SET variant_creation = 'ok' WHERE name[2] = '{}'".format(gene['name'][1])
-                #             )
-                #             continue
-                #     except Exception:
-                #         k += 1
-                #         failed_genes.append('{}'.format(gene['name'][0]))
-                #         continue
-                # if re.search(r'cannot be mapped directly to genome build GRCh38', md_response['mobidetails_error']):
-                #     curs.execute(
-                #         "UPDATE gene SET variant_creation = 'hg38_mapping_default' WHERE name[2] = '{}'".format(gene['name'][1])
-                #     )
-                #     log('INFO', 'MD gene table updated with variant_creation = hg38_mapping_default')
-                # elif re.search(r'does not seem to map correctly to hg19', md_response['mobidetails_error']):
-                #     curs.execute(
-                #         "UPDATE gene SET variant_creation = 'hg19_mapping_default' WHERE name[2] = '{}'".format(gene['name'][1])
-                #     )
-                #     log('INFO', 'MD gene table updated with variant_creation = hg19_mapping_default')
-                # elif re.search(r'with the variant position and intron', md_response['mobidetails_error']):
-                #     curs.execute(
-                #         "UPDATE gene SET variant_creation = 'mapping_default' WHERE name[2] = '{}'".format(gene['name'][1])
-                #     )
-                #     log('INFO', 'MD gene table updated with variant_creation = mapping_default')
-            elif 'mobidetails_id' in md_response and transcript['variant_creation'] != 'ok':
-                curs.execute(
-                    "UPDATE gene SET variant_creation = 'ok' WHERE name[2] = '{}'".format(transcript['name'][1])
-                )
-            db.commit()
         except Exception:
-            log('ERROR', 'failed MD API call {}'.format(md_url))
+            log('WARNING', 'failed MD API call for {}'.format(variant_chgvs))
+            # put back transcript state as it was
+            curs.execute(
+                """
+                UPDATE gene
+                SET variant_creation = %s
+                WHERE name[2] = %s
+                """,
+                (transcript['variant_creation'], transcript['name'][1])
+            )
             k += 1
-            failed_genes.append('{}'.format(transcript['name'][0]))
+            failed_genes.append('{}'.format(transcript['name'][1]))
             continue
-    log('INFO', '{0}/{1} genes reported a VV error'.format(j, num_transcripts))
-    log('INFO', '{0}/{1} genes triggered an MD error:'.format(k, num_transcripts))
+        if 'mobidetails_error' in md_response:
+            j += 1
+            log('WARNING', 'variant creation failed for transcript {0} with error {1}'.format(transcript['name'][1], md_response['mobidetails_error']))
+            # put back transcript state as it was
+            variant_creation_status = transcript['variant_creation']
+            if variant_creation_status == 'ok':
+                variant_creation_status = 'mapping_default'
+            if re.search(r'Internal\sServer\sError', md_response['mobidetails_error']):
+                variant_creation_status = 'vv_server_error'
+            curs.execute(
+                """
+                UPDATE gene
+                SET variant_creation = %s
+                WHERE name[2] = %s
+                """,
+                (variant_creation_status, transcript['name'][1])
+            )
+            db.commit()
+        elif 'mobidetails_id' in md_response and transcript['variant_creation'] != 'ok':
+            curs.execute(
+                """
+                UPDATE gene
+                SET variant_creation = 'ok'
+                WHERE name[2] = '{}'
+                """.format(transcript['name'][1])
+            )
+            db.commit()
+    db.close()
+    log('INFO', '{0}/{1} transcripts reported a VV error'.format(j, num_transcripts))
+    log('INFO', '{0}/{1} transcripts triggered an MD error:'.format(k, num_transcripts))
     log('INFO', failed_genes)
 
 

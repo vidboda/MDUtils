@@ -67,7 +67,11 @@ def check_vv_file(gene, db, curs, ncbi_chr, ncbi_chr_hg19):
                 # transcript needs to be deactivated
                 log('WARNING', "UPDATE gene SET variant_creation = 'not_in_vv_json' WHERE  name[2] = {0}".format(gene['name'][1]))
                 curs.execute(
-                    "UPDATE gene SET variant_creation = 'not_in_vv_json' WHERE  name[2] = %s",
+                    """
+                    UPDATE gene
+                    SET variant_creation = 'not_in_vv_json'
+                    WHERE  name[2] = %s
+                    """,
                     (gene['name'][1],)
                 )
                 db.commit()
@@ -88,7 +92,10 @@ def check_vv_transcript(transcript_found, gene, vv_json, ncbi_chr, ncbi_chr_hg19
                 chrom = chrom[0]
             if chrom not in ncbi_chr:
                 curs.execute(
-                    "SELECT ncbi_name, genome_version FROM chromosomes WHERE name = %s",
+                    """
+                    SELECT ncbi_name, genome_version
+                    FROM chromosomes WHERE name = %s
+                    """,
                     (chrom,)
                 )
                 ncbi_name = curs.fetchall()
@@ -105,7 +112,11 @@ def check_vv_transcript(transcript_found, gene, vv_json, ncbi_chr, ncbi_chr_hg19
                 # check hg19 and hg38
                 if gene['variant_creation'] != 'ok':
                     curs.execute(
-                        "UPDATE gene SET variant_creation = 'ok' WHERE  name[2] = %s",
+                        """
+                        UPDATE gene
+                        SET variant_creation = 'ok'
+                        WHERE  name[2] = %s
+                        """,
                         (gene['name'][1],)
                     )
                     db.commit()
@@ -122,7 +133,11 @@ def check_vv_transcript(transcript_found, gene, vv_json, ncbi_chr, ncbi_chr_hg19
                         ncbi_chr_hg19[chrom] in vv_transcript['genomic_spans']:
                     default = 'hg38_mapping_default'
                 curs.execute(
-                    "UPDATE gene SET variant_creation = %s WHERE name[2] = %s",
+                    """
+                    UPDATE gene
+                    SET variant_creation = %s
+                    WHERE name[2] = %s
+                    """,
                     (default, vv_transcript['reference'])
                 )
                 db.commit()
@@ -138,7 +153,11 @@ def main():
     db = get_db()
     curs = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
     curs.execute(  # get transcripts
-        "SELECT name, variant_creation FROM gene ORDER BY name[1]"
+        """
+        SELECT name, variant_creation
+        FROM gene
+        ORDER BY name[1]
+        """
     )
     genes = curs.fetchall()
     for gene in genes:
@@ -179,7 +198,7 @@ def main():
             ))
             download_vv_file(gene['name'][0], gene['name'][1])
             ncbi_chr, ncbi_chr_hg19 = check_vv_file(gene, db, curs, ncbi_chr, ncbi_chr_hg19)
-
+    db.close()
 
 if __name__ == '__main__':
     main()

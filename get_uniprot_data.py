@@ -45,14 +45,21 @@ def main():
     for id in id_list:
         # exists in MD?
         curs.execute(
-            "SELECT id FROM uniprot WHERE id = %s",
+            """
+            SELECT id
+            FROM uniprot
+            WHERE id = %s
+            """,
             (id,)
         )
         res_id = curs.fetchone()
         if not res_id:
             # insetr value
             curs.execute(
-                "INSERT INTO uniprot (id) VALUES (%s)",
+                """
+                INSERT INTO uniprot (id)
+                VALUES (%s)
+                """,
                 (id,)
             )
             db.commit()
@@ -91,7 +98,13 @@ def main():
                     name = re.split('=', re.split(';', info[8])[0])[1]
                     # exists?
                     curs.execute(
-                        "SELECT name FROM uniprot_domain WHERE uniprot_id = %s AND name = %s AND aa_start = %s",
+                        """
+                        SELECT name
+                        FROM uniprot_domain
+                        WHERE uniprot_id = %s
+                            AND name = %s
+                            AND aa_start = %s
+                        """,
                         (
                             id,
                             name,
@@ -107,7 +120,10 @@ def main():
                         #     name
                         # ))
                         curs.execute(
-                            "INSERT INTO uniprot_domain (uniprot_id, aa_start, aa_end, name) VALUES (%s, %s, %s, %s)",
+                            """
+                            INSERT INTO uniprot_domain (uniprot_id, aa_start, aa_end, name)
+                            VALUES (%s, %s, %s, %s)
+                            """,
                             (
                                 id,
                                 info[3],
@@ -116,6 +132,7 @@ def main():
                             )
                         )
                         db.commit()
+    db.close()
 
 
 if __name__ == '__main__':

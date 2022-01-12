@@ -8,7 +8,8 @@ import psycopg2
 import psycopg2.extras
 
 # requires MobiDetails config module + database.ini file
-from MobiDetailsApp import config, md_utilities
+# from MobiDetailsApp import config, md_utilities, get_db
+from MobiDetailsApp import md_utilities, configuration
 
 # script to precompute existing variants
 
@@ -23,7 +24,7 @@ def log(level, text):
 def get_db():
     try:
         # read connection parameters
-        params = config.mdconfig()
+        params = configuration.mdconfig()
         db = psycopg2.connect(**params)
     except (Exception, psycopg2.DatabaseError) as error:
         log('ERROR', error)
@@ -34,7 +35,12 @@ def main():
     db = get_db()
     curs = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
     curs.execute(
-        "SELECT id, gene_name[1] as symbol, gene_name[2] as nm, c_name FROM variant_feature ORDER BY RANDOM()"
+        """
+        SELECT id, gene_name[1] AS symbol, gene_name[2] AS nm, c_name
+        FROM variant_feature
+        ORDER BY RANDOM()
+        LIMIT 2
+        """
     )
     res = curs.fetchall()
     total = curs.rowcount
@@ -42,6 +48,7 @@ def main():
     j = 0
     for var in res:
         j += 1
+        # log('DEBUG', j)
         if j % 500 == 0:
             log('INFO', '{0}/{1} variant checked'.format(j, total))
         if not os.path.exists(
@@ -70,6 +77,7 @@ def main():
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.STDOUT
             )
+            # log('DEBUG', result.returncode)
             if result.returncode == 0:
                 with open(r'{0}{1}.txt'.format(md_utilities.local_files['spip']['abs_path'], var['id'])) as spip_file:
                     num_lines = len(spip_file.readlines())
@@ -79,6 +87,8 @@ def main():
                     continue
                 precomputed += 1
     log('INFO', 'Pre-computed {0} variants / {1}'.format(precomputed, total))
+    # db.close()
+    db.close()
 
 
 if __name__ == '__main__':

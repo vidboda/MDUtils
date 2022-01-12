@@ -39,7 +39,11 @@ def main():
         api_key = args.api_key
         # user
         curs.execute(
-            "SELECT username FROM mobiuser WHERE api_key = %s",
+            """
+            SELECT username
+            FROM mobiuser
+            WHERE api_key = %s
+            """,
             (api_key,)
         )
         res_user = curs.fetchone()
@@ -55,7 +59,18 @@ def main():
         diff = {}
         # get genes w/ more than one isoform
         curs.execute(
-            "SELECT name[1] AS hgnc, name[2] AS nm FROM gene WHERE canonical = 't' AND name[1] IN (SELECT name[1] FROM gene GROUP BY name[1] HAVING COUNT(name[1]) > 1) ORDER by name[1]"
+            """
+            SELECT name[1] AS hgnc, name[2] AS nm
+            FROM gene
+            WHERE canonical = 't'
+                AND name[1] IN (
+                    SELECT name[1]
+                    FROM gene
+                    GROUP BY name[1]
+                    HAVING COUNT(name[1]) > 1
+                )
+            ORDER by name[1]
+            """
         )
         res = curs.fetchall()
         i = 0
@@ -87,11 +102,19 @@ def main():
                         }
                         log('INFO', 'updating canonical for {0}: {1} instead of {2}'.format(gene['hgnc'], key, full_nm))
                         curs.execute(
-                            "UPDATE gene SET canonical = 'f' WHERE name[1] = %s",
+                            """
+                            UPDATE gene
+                            SET canonical = 'f'
+                            WHERE name[1] = %s
+                            """,
                             (gene['hgnc'],)
                         )
                         curs.execute(
-                            "UPDATE gene SET canonical = 't' WHERE name[2] = %s",
+                            """
+                            UPDATE gene
+                            SET canonical = 't'
+                            WHERE name[2] = %s
+                            """,
                             (new_nm,)
                         )
                         db.commit()
@@ -100,6 +123,7 @@ def main():
                         log('INFO', 'Variants update returned value for {0}: {1}'.format(gene['hgnc'], returned_value))
         pp = pprint.PrettyPrinter(indent=4)
         pp.pprint(diff)
+    db.close()
 
 
 if __name__ == '__main__':

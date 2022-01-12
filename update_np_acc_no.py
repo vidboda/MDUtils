@@ -41,7 +41,12 @@ def main():
         http = urllib3.PoolManager(cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())
         # get list of remaining genes with no canonical defined
         curs.execute(
-            "SELECT name, np FROM gene WHERE np = 'NP_000000.0' ORDER by name"
+            """
+            SELECT name, np
+            FROM gene
+            WHERE np = 'NP_000000.0'
+            ORDER by name
+            """
         )
         res = curs.fetchall()
         for acc in res:
@@ -51,13 +56,18 @@ def main():
             match_object = re.search(r'accession\s"(NP_\d+)",\s+version\s(\d+)$', eutils_response, re.MULTILINE)
             if match_object:
                 curs.execute(
-                    "UPDATE gene SET np = '{0}.{1}' WHERE name[2] = '{2}'".format(match_object.group(1), match_object.group(2), acc['name'][1])
+                    """
+                    UPDATE gene
+                    SET np = '{0}.{1}'
+                    WHERE name[2] = '{2}'
+                    """.format(match_object.group(1), match_object.group(2), acc['name'][1])
                 )
                 log('INFO', 'Updated gene NP acc no of {0} to {1}.{2}'.format(acc['name'][0], match_object.group(1), match_object.group(2)))
                 i += 1
     log('INFO', '{} genes updated'.format(i))
 
     db.commit()
+    db.close()
 
 
 if __name__ == '__main__':

@@ -27,14 +27,23 @@ def main():
         geneLineList = geneLine.split("\t")
         # print(geneLineList[0])
         curs.execute(  # exists in MD?
-            "SELECT name FROM gene WHERE name[1] = '{0}' AND canonical = 't'".format(geneLineList[0])
+            """
+            SELECT name
+            FROM gene
+            WHERE name[1] = '{0}'
+                AND canonical = 't'
+            """.format(geneLineList[0])
             # number_of_exons IN (SELECT MAX(number_of_exons) FROM gene WHERE name[1] = '{0}')".format(geneLineList[0])
         )
         mdNMFirst = curs.fetchone()
         if mdNMFirst is not None:
             # print(mdNMFirst['nm'])
             curs.execute(
-                "SELECT DISTINCT(gene_name[2]) FROM gene_annotation WHERE gene_name[1] = '{}'".format(geneLineList[0])
+                """
+                SELECT DISTINCT(gene_name[2])
+                FROM gene_annotation
+                WHERE gene_name[1] = '{}'
+                """.format(geneLineList[0])
             )  # exists in table gene_annotation? get a nm
             mdNMSecond = curs.fetchone()
             if mdNMSecond is None:
@@ -60,7 +69,10 @@ def main():
                         next
 
                 curs.execute(
-                    "INSERT INTO gene_annotation VALUES('{0}','{1}','{2}','{3}','{4}','{5}','{6}','{7}','{8}','{9}')".format(
+                    """
+                    INSERT INTO gene_annotation
+                    VALUES('{0}','{1}','{2}','{3}','{4}','{5}','{6}','{7}','{8}','{9}')
+                    """.format(
                         postGene,
                         oeValues['synoe'],
                         oeValues['synlower'],
@@ -77,6 +89,7 @@ def main():
     log('INFO', '{} annotations added'.format(i))
 
     db.commit()
+    db.close()
 
 
 if __name__ == '__main__':

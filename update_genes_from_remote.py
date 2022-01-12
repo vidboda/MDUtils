@@ -49,7 +49,11 @@ def main():
     curs = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
     # get local list of genes
     curs.execute(
-        "SELECT DISTINCT(name[1]), second_name, chr, hgnc_id, ng, strand, hgnc_name as gene_symbol FROM gene ORDER BY name[1]"
+        """
+        SELECT DISTINCT(name[1]), second_name, chr, hgnc_id, ng, strand, hgnc_name AS gene_symbol
+        FROM gene
+        ORDER BY name[1]
+        """
     )
     genes = curs.fetchall()
     count = curs.rowcount
@@ -137,23 +141,11 @@ def main():
                         # curs.execute(update_sql_transcript)
                         # db.commit()
                 else:
-                    # get prot size from eutils
-                    # ncbi_url = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=protein&id={0}&rettype=gp&complexity=3&api_key={1}'.format(api_response['RefProtein'], ncbi_api_key)
-                    # prot_size = 'NULL'
-                    # try:
-                    #     eutils_response = http.request('GET', ncbi_url).data.decode('utf-8')
-                    #     # log('DEBUG', eutils_response)
-                    #     prot_match = re.search(r'Protein\s+1\.\.(\d+)', eutils_response)  # Protein\s+1\.\.(\d+)$
-                    #     if prot_match:
-                    #         # log('DEBUG', 'ouhou')
-                    #         prot_size = prot_match.group(1)
-                    # except Exception:
-                    #     log('WARNING', 'no protein size w/ eutils NP acc no {0}, eutils URL:{1}'.format(gene['np'], ncbi_url))
-                    # insert_prot_size = gene['prot_size']
-                    # if prot_size != 'NULL':
-                    #     insert_prot_size = prot_size
                     # insert
-                    insert_gene = "INSERT INTO gene (name, second_name, chr, strand, number_of_exons, hgnc_name, prot_size, uniprot_id, ng, np, enst, ensp, canonical, variant_creation, hgnc_id ) VALUES ('{{\"{0}\",\"{1}\"}}', '{2}', '{3}', '{4}', {5}, '{6}', {7}, '{8}', '{9}', '{10}', '{11}', '{12}', '{13}', '{14}', {15})".format(
+                    insert_gene = """
+                    INSERT INTO gene (name, second_name, chr, strand, number_of_exons, hgnc_name, prot_size, uniprot_id, ng, np, enst, ensp, canonical, variant_creation, hgnc_id )
+                    VALUES ('{{\"{0}\",\"{1}\"}}', '{2}', '{3}', '{4}', {5}, '{6}', {7}, '{8}', '{9}', '{10}', '{11}', '{12}', '{13}', '{14}', {15})
+                    """.format(
                         api_response['HGNCSymbol'],
                         nm_obj,
                         gene['second_name'],
@@ -175,6 +167,7 @@ def main():
                     # curs.execute(insert_gene)
                     # db.commit()
         print('.', end="", flush=True)
+    db.close()
 
 
 if __name__ == '__main__':

@@ -21,7 +21,16 @@ def main():
         db = get_db()
         curs = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
         curs.execute(
-            "SELECT a.id, b.pos, b.pos_ref, b.pos_alt, c.ncbi_name FROM variant_feature a, variant b, chromosomes c WHERE a.id = b.feature_id AND b.chr = c.name AND c.genome_version = 'hg38' AND b.genome_version = 'hg38' AND a.dbsnp_id is NULL ORDER BY a.id"
+            """
+            SELECT a.id, b.pos, b.pos_ref, b.pos_alt, c.ncbi_name
+            FROM variant_feature a, variant b, chromosomes c
+            WHERE a.id = b.feature_id
+                AND b.chr = c.name
+                AND c.genome_version = 'hg38'
+                AND b.genome_version = 'hg38'
+                AND a.dbsnp_id is NULL
+            ORDER BY a.id
+            """
         )
         res = curs.fetchall()
         count = curs.rowcount
@@ -45,7 +54,11 @@ def main():
                         new_rs_id = match_object.group(1)
                         # need to update var entry
                         curs.execute(
-                            "UPDATE variant_feature SET dbsnp_id = %s WHERE id = %s",
+                            """
+                            UPDATE variant_feature
+                            SET dbsnp_id = %s
+                            WHERE id = %s
+                            """,
                             (new_rs_id, var['id'])
                         )
                         log('INFO', 'Adding rsid for variant {0} - ref:{1} - alt:{2} to rs{3}'.format(var['id'], var['pos_ref'], var['pos_alt'], new_rs_id))

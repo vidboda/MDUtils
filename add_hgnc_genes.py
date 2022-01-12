@@ -39,7 +39,11 @@ def main():
                 db = get_db()
                 curs = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
                 curs.execute(  # get genes - one transcript per gene (canonical) - allows update of all trasncripts
-                    "SELECT name, hgnc_name, second_name FROM gene WHERE hgnc_id = %s",
+                    """
+                    SELECT name, hgnc_name, second_name
+                    FROM gene
+                    WHERE hgnc_id = %s
+                    """,
                     (hgnc_id,)
                 )
                 md_gene = curs.fetchone()
@@ -61,7 +65,11 @@ def main():
                         else:
                             # log('DEBUG', 'Symbol change for HGNC {0}, MD {1}'.format(hgnc_current_symbol, md_gene['name'][0]))
                             curs.execute(
-                                "UPDATE gene SET name[1] = %s, second_name = %s || ',' || %s WHERE hgnc_id = %s",
+                                """
+                                UPDATE gene
+                                SET name[1] = %s, second_name = %s || ',' || %s
+                                WHERE hgnc_id = %s
+                                """,
                                 (
                                     hgnc_current_symbol,
                                     md_gene['name'][0],
@@ -73,7 +81,11 @@ def main():
                     if md_gene['hgnc_name'] != gene_info[2]:
                         # log('DEBUG', 'Name differs for HGNC:{0}, MD {1}'.format(gene_info[2], md_gene['name'][0]))
                         curs.execute(
-                            "UPDATE gene SET hgnc_name = %s WHERE hgnc_id = %s",
+                            """
+                            UPDATE gene
+                            SET hgnc_name = %s
+                            WHERE hgnc_id = %s
+                            """,
                             (
                                 gene_info[2],
                                 hgnc_id
@@ -109,7 +121,11 @@ def main():
                                         insert_dict['chr'] = insert_dict['chr'][0]
                                     if insert_dict['chr'] not in ncbi_chr:
                                         curs.execute(
-                                            "SELECT ncbi_name, genome_version FROM chromosomes WHERE name = %s",
+                                            """
+                                            SELECT ncbi_name, genome_version
+                                            FROM chromosomes
+                                            WHERE name = %s
+                                            """,
                                             (insert_dict['chr'],)
                                         )
                                         ncbi_name = curs.fetchall()
@@ -158,7 +174,10 @@ def main():
                                             ).replace("'NULL'", "NULL")
                                             )
                                         curs.execute(
-                                            "INSERT INTO gene (name, {0}) VALUES ('{{\"{1}\",\"{2}\"}}', '{3}')".format(
+                                            """
+                                            INSERT INTO gene (name, {0})
+                                            VALUES ('{{\"{1}\",\"{2}\"}}', '{3}')
+                                            """.format(
                                                 s.join(insert_dict.keys()),
                                                 hgnc_current_symbol,
                                                 vv_transcript['reference'],
@@ -172,6 +191,7 @@ def main():
                         else:
                             log('WARNING', 'No transcript in {0}.json file'.format(hgnc_current_symbol))
                             continue
+                db.close()
 
         print('.', end="", flush=True)
 

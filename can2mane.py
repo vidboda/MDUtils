@@ -9,11 +9,19 @@ from MobiDetailsApp import md_utilities
 # script to set MD canonical to MANE or refseqSelect if no mane?
 def update_canonical(gene_symbol, transcript, curs, db):
     curs.execute(
-        "UPDATE gene set canonical = 'f' WHERE name[1] = %s",
+        """
+        UPDATE gene
+        SET canonical = 'f'
+        WHERE name[1] = %s
+        """,
         (gene_symbol,)
     )
     curs.execute(
-        "UPDATE gene set canonical = 't' WHERE name[2] = %s",
+        """
+        UPDATE gene
+        SET canonical = 't'
+        WHERE name[2] = %s
+        """,
         (transcript,)
     )
     db.commit()
@@ -24,7 +32,11 @@ def main():
     db = get_db()
     curs = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
     curs.execute(  # get each gene
-        "SELECT DISTINCT(name[1]) as gene_symbol FROM gene ORDER BY name[1]"
+        """
+        SELECT DISTINCT(name[1]) AS gene_symbol
+        FROM gene
+        ORDER BY name[1]
+        """
     )
     genes = curs.fetchall()
     for gene in genes:
@@ -79,6 +91,7 @@ def main():
                 log('WARNING', 'No transcript in VV file for {0}'.format(gene['gene_symbol']))
         else:
             log('WARNING', 'No VV file for {0}'.format(gene['gene_symbol']))
+    db.close()
 
 
 if __name__ == '__main__':

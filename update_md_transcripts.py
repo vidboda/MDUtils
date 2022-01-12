@@ -42,13 +42,24 @@ def main():
     curs = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
     if not gene_file:
         curs.execute(  # get genes - one transcript per gene (canonical) - allows update of all trasncripts
-            "SELECT name, second_name, hgnc_name, np, chr, number_of_exons, ng, hgnc_id, strand, uniprot_id FROM gene WHERE canonical = 't' ORDER by name[1]"  # " ORDER BY random()"
+            """
+            SELECT name, second_name, hgnc_name, np, chr, number_of_exons, ng, hgnc_id, strand, uniprot_id
+            FROM gene
+            WHERE canonical = 't'
+            ORDER by name[1]
+            """  # " ORDER BY random()"
         )
         #  WHERE canonical = 't'
     else:
         log('INFO', 'The following genes will be considered {0}'.format(gene_list))
         curs.execute(  # get genes - one transcript per gene (canonical) - allows update of all trasncripts from the list
-            "SELECT name, second_name, hgnc_name, np, chr, number_of_exons, ng, hgnc_id, strand, uniprot_id FROM gene WHERE canonical = 't' AND name[1] IN ({0}) ORDER by name[1]".format(gene_list)  # " ORDER BY random()"
+            """
+            SELECT name, second_name, hgnc_name, np, chr, number_of_exons, ng, hgnc_id, strand, uniprot_id
+            FROM gene
+            WHERE canonical = 't'
+                AND name[1] IN ({0})
+            ORDER by name[1]
+            """.format(gene_list)  # " ORDER BY random()"
         )
     genes = curs.fetchall()
     count = curs.rowcount
@@ -60,7 +71,11 @@ def main():
             log('INFO', '{0}/{1} genes checked'.format(i, count))
 
         curs.execute(
-            "SELECT ncbi_name, genome_version FROM chromosomes WHERE name = %s",
+            """
+            SELECT ncbi_name, genome_version
+            FROM chromosomes
+            WHERE name = %s
+            """,
             (gene['chr'],)
         )
         ncbi_name = curs.fetchall()
@@ -80,7 +95,11 @@ def main():
             log('WARNING', 'No value for {0}'.format(gene['name'][0]))
             # disable in MD
             curs.execute(
-                "UPDATE gene SET variant_creation = 'not_in_vv_json' WHERE name[1] = %s",
+                """
+                UPDATE gene
+                SET variant_creation = 'not_in_vv_json'
+                WHERE name[1] = %s
+                """,
                 (gene['name'][0],)
             )
             db.commit()
@@ -97,14 +116,22 @@ def main():
                 log('WARNING', 'No value for {0}'.format(gene['name'][0]))
                 # disable in MD
                 curs.execute(
-                    "UPDATE gene SET variant_creation = 'not_in_vv_json' WHERE name[1] = %s",
+                    """
+                    UPDATE gene
+                    SET variant_creation = 'not_in_vv_json'
+                    WHERE name[1] = %s
+                    """,
                     (gene['name'][0],)
                 )
                 db.commit()
                 continue
             if 'error' in vv_data:
                 curs.execute(
-                    "UPDATE gene SET variant_creation = 'not_in_vv_json' WHERE name[1] = %s",
+                    """
+                    UPDATE gene
+                    SET variant_creation = 'not_in_vv_json'
+                    WHERE name[1] = %s
+                    """,
                     (gene['name'][0],)
                 )
                 db.commit()
@@ -168,7 +195,11 @@ def main():
             if vv_data['current_symbol'] == gene['name'][0] and \
                     vv_data['current_name'] != gene['hgnc_name']:
                 curs.execute(
-                    "UPDATE gene SET hgnc_name = %s WHERE name[1] = %s",
+                    """
+                    UPDATE gene
+                    SET hgnc_name = %s
+                    WHERE name[1] = %s
+                    """,
                     (vv_data['current_name'], gene['name'][0])
                 )
                 db.commit()
@@ -179,7 +210,11 @@ def main():
                 # update np
                 if not gene['np']:
                     curs.execute(
-                        "UPDATE gene SET np = %s WHERE name[2] = %s",
+                        """
+                        UPDATE gene
+                        SET np = %s
+                        WHERE name[2] = %s
+                        """,
                         (transcript['translation'], gene['name'][1])
                     )
                 # update nb of exons and NP acc no
@@ -190,13 +225,21 @@ def main():
                         # log('DEBUG', 'Current #exons: {0} - VV #exons: {1}'.format(gene['number_of_exons'], nb_exons))
                         if int(nb_exons) != int(gene['number_of_exons']):
                             curs.execute(
-                                "UPDATE gene SET number_of_exons = %s WHERE name[2] = %s",
+                                """"
+                                UPDATE gene
+                                SET number_of_exons = %s
+                                WHERE name[2] = %s
+                                """,
                                 (nb_exons, gene['name'][1])
                             )
                             log('INFO', "NB EXONS UPDATE: gene {0}-{1} modified from {2} to {3}".format(gene['name'][0], gene['name'][1], gene['number_of_exons'], nb_exons))
                         if transcript['translation'] != gene['np']:
                             curs.execute(
-                                "UPDATE gene SET np = %s WHERE name[2] = %s",
+                                """
+                                UPDATE gene
+                                SET np = %s
+                                WHERE name[2] = %s
+                                """,
                                 (transcript['translation'], gene['name'][1])
                             )
                             log('INFO', "NP UPDATE: gene {0} modified from {1} to {2}".format(gene['name'][0], gene['np'], transcript['translation']))
@@ -210,7 +253,11 @@ def main():
                         if match_object:
                             nm_acc = match_object.group(1)
                             curs.execute(
-                                "SELECT name FROM gene WHERE name[2] = %s",
+                                """
+                                SELECT name
+                                FROM gene
+                                WHERE name[2] = %s
+                                """,
                                 (nm_acc,)
                             )
                             res_nm = curs.fetchone()
@@ -227,6 +274,17 @@ def main():
                             log('WARNING', 'No VV result for {0}'.format(nm_acc))
                             continue
                         noupdate = None
+                        if 'message' in vv_data_var and \
+                                vv_data_var['message'] == 'Internal Server Error':
+                            curs.execute(
+                                """
+                                UPDATE gene
+                                SET variant_creation = 'vv_server_error'
+                                WHERE name[2] = %s
+                                """,
+                                (nm_acc,)
+                            )
+                            db.commit()
                         for first_level_key in vv_data_var:
                             if 'validation_warnings' in vv_data_var[first_level_key]:
                                 for warning in vv_data_var[first_level_key]['validation_warnings']:
@@ -259,7 +317,7 @@ def main():
                             insert_dict['variant_creation'] = 'ok'
                             insert_dict['number_of_exons'] = transcript['genomic_spans'][ncbi_chr]['total_exons']
                             insert_dict['hgnc_name'] = vv_data['current_name'].replace("'", "''")
-                            insert_dict['prot_size'] = int((transcript['coding_end'] - transcript['coding_start'] + 1) / 3)
+                            insert_dict['prot_size'] = int((transcript['coding_end'] - transcript['coding_start'] + 1) / 3)-1
                             for acc in transcript:
                                 ng_match = re.search(r'^(NG_\d+\.\d{1,2})$', acc)
                                 if ng_match:
@@ -301,7 +359,10 @@ def main():
                             #     ).replace("'NULL'", "NULL")
                             # )
                             curs.execute(
-                                "INSERT INTO gene (name, {0}) VALUES ('{{\"{1}\",\"{2}\"}}', '{3}')".format(
+                                """
+                                INSERT INTO gene (name, {0})
+                                VALUES ('{{\"{1}\",\"{2}\"}}', '{3}')
+                                """.format(
                                     s.join(insert_dict.keys()),
                                     gene['name'][0],
                                     transcript['reference'],
@@ -316,11 +377,19 @@ def main():
                                     # reset MD canonical for this gene and set it for this transcript
                                     # log('INFO', 'Updating canonical for gene {0} from {1} to {2}'.format(gene['name'][0], gene['name'][1], transcript['reference']))
                                     curs.execute(
-                                        "UPDATE gene SET canonical = 'f' WHERE name[1] = %s",
+                                        """
+                                        UPDATE gene
+                                        SET canonical = 'f'
+                                        WHERE name[1] = %s
+                                        """,
                                         (gene['name'][0],)
                                     )
                                     curs.execute(
-                                        "UPDATE gene SET canonical = 't' WHERE name[2] = %s",
+                                        """
+                                        UPDATE gene
+                                        SET canonical = 't'
+                                        WHERE name[2] = %s
+                                        """,
                                         (transcript['reference'],)
                                     )
                                     db.commit()
@@ -335,12 +404,17 @@ def main():
                                 hg19_ncbi_chr in transcript['genomic_spans']:
                             default = 'hg38_mapping_default'
                         curs.execute(
-                            "UPDATE gene SET variant_creation = %s WHERE name[2] = %s",
+                            """
+                            UPDATE gene
+                            SET variant_creation = %s
+                            WHERE name[2] = %s
+                            """,
                             (default, transcript['reference'])
                         )
                         db.commit()
         # db.commit()
         print('.', end="", flush=True)
+    db.close()
 
 
 if __name__ == '__main__':
