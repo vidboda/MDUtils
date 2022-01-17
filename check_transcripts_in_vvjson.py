@@ -1,14 +1,13 @@
 import os
-import sys
+import time
 import json
 import urllib3
 import certifi
 import psycopg2
 import psycopg2.extras
-import time
 from precompute_spipv2 import get_db, log
 # requires MobiDetails config module + database.ini file
-from MobiDetailsApp import config, md_utilities
+from MobiDetailsApp import md_utilities
 
 # Script to check whether the transcripts recorded in MD are present in VV json files
 # If a transcript is deactivated and found in a new file, becomes ok
@@ -24,28 +23,31 @@ from MobiDetailsApp import config, md_utilities
 
 
 def download_vv_file(gene, transcript):
-    vv_url_base = "https://rest.variantvalidator.org"
-    http = urllib3.PoolManager(cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())
-    vv_url = "{0}/VariantValidator/tools/gene2transcripts/{1}?content-type=application/json".format(vv_url_base, transcript)
-    try:
-        vv_data = json.loads(http.request('GET', vv_url).data.decode('utf-8'))
-        with open(
-            '{0}{1}.json'.format(
-                md_utilities.local_files['variant_validator']['abs_path'],
-                gene
-            ),
-            "w",
-            encoding='utf-8'
-        ) as vv_file:
-            json.dump(
-                vv_data,
-                vv_file,
-                ensure_ascii=False,
-                indent=4
-            )
-        log('INFO', "VV JSON file copied for gene {0}-{1}".format(gene, transcript))
-    except Exception:
-        log('ERROR', 'No VV JSON file for {0}'.format(gene))
+    vv_json_gene_file = '{0}{1}.json'.format(
+        md_utilities.local_files['variant_validator']['abs_path'],
+        gene
+    )
+    # check if the file has already been modified today
+    if ((time.time() - os.path.getmtime(vv_json_gene_file)) / 3600) > 24:
+        vv_url_base = "https://rest.variantvalidator.org"
+        http = urllib3.PoolManager(cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())
+        vv_url = "{0}/VariantValidator/tools/gene2transcripts/{1}?content-type=application/json".format(vv_url_base, transcript)
+        try:
+            vv_data = json.loads(http.request('GET', vv_url).data.decode('utf-8'))
+            with open(
+                vv_json_gene_file,
+                "w",
+                encoding='utf-8'
+            ) as vv_file:
+                json.dump(
+                    vv_data,
+                    vv_file,
+                    ensure_ascii=False,
+                    indent=4
+                )
+            log('INFO', "VV JSON file copied for gene {0}-{1}".format(gene, transcript))
+        except Exception:
+            log('ERROR', 'No VV JSON file for {0}'.format(gene))
 
 
 def check_vv_file(gene, db, curs, ncbi_chr, ncbi_chr_hg19):
@@ -63,18 +65,18 @@ def check_vv_file(gene, db, curs, ncbi_chr, ncbi_chr_hg19):
         transcript_found = False
         try:
             transcript_found, ncbi_chr, ncbi_chr_hg19 = check_vv_transcript(transcript_found, gene, vv_json, ncbi_chr, ncbi_chr_hg19, curs, db)
-            if not transcript_found:
-                # transcript needs to be deactivated
-                log('WARNING', "UPDATE gene SET variant_creation = 'not_in_vv_json' WHERE  name[2] = {0}".format(gene['name'][1]))
-                curs.execute(
-                    """
-                    UPDATE gene
-                    SET variant_creation = 'not_in_vv_json'
-                    WHERE  name[2] = %s
-                    """,
-                    (gene['name'][1],)
-                )
-                db.commit()
+            # if not transcript_found:
+            #     # transcript needs to be deactivated
+            #     log('WARNING', "UPDATE gene SET variant_creation = 'not_in_vv_json' WHERE  name[2] = {0}".format(gene['name'][1]))
+            #     curs.execute(
+            #         """
+            #         UPDATE gene
+            #         SET variant_creation = 'not_in_vv_json'
+            #         WHERE  name[2] = %s
+            #         """,
+            #         (gene['name'][1],)
+            #     )
+            #     db.commit()
         except KeyError:
             log('WARNING', 'No transcript in file {0}{1}'.format(
                 md_utilities.local_files['variant_validator']['abs_path'],
@@ -104,7 +106,6 @@ def check_vv_transcript(transcript_found, gene, vv_json, ncbi_chr, ncbi_chr_hg19
                         ncbi_chr_hg19[chrom] = chromo['ncbi_name']
                     elif chromo['genome_version'] == 'hg38':
                         ncbi_chr[chrom] = chromo['ncbi_name']
-                db.commit()
             # chek that we have hg19 and hg38
             if ncbi_chr[chrom] in vv_transcript['genomic_spans'] and \
                     ncbi_chr_hg19[chrom] in vv_transcript['genomic_spans']:
@@ -121,10 +122,10 @@ def check_vv_transcript(transcript_found, gene, vv_json, ncbi_chr, ncbi_chr_hg19
                     )
                     db.commit()
                     log('INFO', 'Transcript {0} becomes ok'.format(gene['name'][1]))
-                break
+                return transcript_found, ncbi_chr, ncbi_chr_hg19
             else:
                 # hg19/38 mapping issue
-                log('WARNING', 'Transcript {0} from gene {1} has hg19/38 mapping issues'.format(vv_transcript['reference'], gene['name'][0]))
+                log('WARNING', 'Transcript {0} from gene {1} has hg19/38 mapping issues'.format(gene['name'][1], gene['name'][0]))
                 default = 'hg19_mapping_default'
                 if ncbi_chr[chrom] not in vv_transcript['genomic_spans'] and \
                         ncbi_chr_hg19[chrom] not in vv_transcript['genomic_spans']:
@@ -138,9 +139,22 @@ def check_vv_transcript(transcript_found, gene, vv_json, ncbi_chr, ncbi_chr_hg19
                     SET variant_creation = %s
                     WHERE name[2] = %s
                     """,
-                    (default, vv_transcript['reference'])
+                    (default, gene['name'][1])
                 )
                 db.commit()
+                return transcript_found, ncbi_chr, ncbi_chr_hg19
+    # transcript not in file
+    log('WARNING', 'Transcript {0} from gene {1} not found in VV json'.format(gene['name'][1], gene['name'][0]))
+    if gene['variant_creation'] == 'ok':
+        curs.execute(
+            """
+            UPDATE gene
+            SET variant_creation = 'not_in_vv_json'
+            WHERE name[2] = %s
+            """,
+            (gene['name'][1],)
+        )
+        db.commit()
     return transcript_found, ncbi_chr, ncbi_chr_hg19
 
 
@@ -150,12 +164,13 @@ def main():
     ncbi_chr = {}
     ncbi_chr_hg19 = {}
     # 1st get all transcripts
-    db = get_db()
+    db_pool, db = get_db()
     curs = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
     curs.execute(  # get transcripts
         """
         SELECT name, variant_creation
         FROM gene
+        WHERE variant_creation = 'ok'
         ORDER BY name[1]
         """
     )
@@ -198,7 +213,8 @@ def main():
             ))
             download_vv_file(gene['name'][0], gene['name'][1])
             ncbi_chr, ncbi_chr_hg19 = check_vv_file(gene, db, curs, ncbi_chr, ncbi_chr_hg19)
-    db.close()
+    db_pool.putconn(db)
+
 
 if __name__ == '__main__':
     main()

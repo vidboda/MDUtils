@@ -36,7 +36,7 @@ def main():
                 # if ok, check current symbol and change it if needed
                 # else download file from VV and insert new gene and transcript
                 hgnc_current_symbol = gene_info[1]
-                db = get_db()
+                db_pool, db = get_db()
                 curs = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
                 curs.execute(  # get genes - one transcript per gene (canonical) - allows update of all trasncripts
                     """
@@ -191,7 +191,7 @@ def main():
                         else:
                             log('WARNING', 'No transcript in {0}.json file'.format(hgnc_current_symbol))
                             continue
-                db.close()
+                db_pool.putconn(db)
 
         print('.', end="", flush=True)
 

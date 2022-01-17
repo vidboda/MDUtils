@@ -24,7 +24,7 @@ def main():
     # vv_url_base = "https://rest.variantvalidator.org"
     vv_url_base = "https://www608.lamp.le.ac.uk"
 
-    parser = argparse.ArgumentParser(description='Update MD gene files from VV', usage='python update_md_transcripts.py.py [-f path/to/dir/containing/genes/file.txt]')
+    parser = argparse.ArgumentParser(description='Update MD gene files from VV', usage='python update_md_transcripts.py [-f path/to/dir/containing/genes/file.txt]')
     parser.add_argument('-f', '--file', default='', required=False, help='Path to the genes file to be updated')
     args = parser.parse_args()
     # get sql file list
@@ -38,7 +38,7 @@ def main():
         gene_list = gene_list[:-2]
     elif args.file:
         log('ERROR', 'Invalid input path for gene file, please check your command')
-    db = get_db()
+    db_pool, db = get_db()
     curs = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
     if not gene_file:
         curs.execute(  # get genes - one transcript per gene (canonical) - allows update of all trasncripts
@@ -218,7 +218,9 @@ def main():
                         (transcript['translation'], gene['name'][1])
                     )
                 # update nb of exons and NP acc no
-                if ncbi_chr in transcript['genomic_spans']:
+                if ncbi_chr in transcript['genomic_spans'] and \
+                        hg19_ncbi_chr in transcript['genomic_spans']:
+                    # if ncbi_chr in transcript['genomic_spans']:
                     nb_exons = transcript['genomic_spans'][ncbi_chr]['total_exons']
                     # log('DEBUG', '{0}-{1}'.format(transcript['reference'], gene['name'][1]))
                     if transcript['reference'] == gene['name'][1]:
@@ -244,9 +246,9 @@ def main():
                             )
                             log('INFO', "NP UPDATE: gene {0} modified from {1} to {2}".format(gene['name'][0], gene['np'], transcript['translation']))
                         db.commit()
-                if ncbi_chr in transcript['genomic_spans'] and \
-                        hg19_ncbi_chr in transcript['genomic_spans']:
-                    continue
+                    # if ncbi_chr in transcript['genomic_spans'] and \
+                    #         hg19_ncbi_chr in transcript['genomic_spans']:
+                        # continue
                     if re.search(r'^NM_\d+\.\d{1,2}$', transcript['reference']):
                         # transcript suitable for MD
                         match_object = re.search(r'^(N[MR]_\d+\.\d{1,2})', transcript['reference'])
@@ -414,7 +416,7 @@ def main():
                         db.commit()
         # db.commit()
         print('.', end="", flush=True)
-    db.close()
+    db_pool.putconn(db)
 
 
 if __name__ == '__main__':

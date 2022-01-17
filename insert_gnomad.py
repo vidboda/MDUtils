@@ -19,7 +19,7 @@ def main():
         sys.exit('Invalid input path, please check your command')
 
     # get db connector and cursor
-    db = get_db()
+    db_pool, db = get_db()
     curs = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
     i = 0
 
@@ -89,7 +89,7 @@ def main():
     log('INFO', '{} annotations added'.format(i))
 
     db.commit()
-    db.close()
+    db_pool.putconn(db)
 
 
 if __name__ == '__main__':

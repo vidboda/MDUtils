@@ -22,7 +22,7 @@ def main():
     parser.add_argument('-g', '--gene-name', default='', required=True,
                         help='The gene you want to update the variants from.')
     args = parser.parse_args()
-    db = get_db()
+    db_pool, db = get_db()
     curs = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
     username = None
     if len(args.api_key) != 43:
@@ -219,6 +219,7 @@ def main():
                     log('INFO', 'Variant {0} updated to {1}'.format(var['c_name'], new_c_name))
 
     db.commit()
+    db_pool.putconn(db)
 
 
 if __name__ == '__main__':

@@ -18,21 +18,30 @@ def log(level, text):
     localtime = time.asctime(time.localtime(time.time()))
     if level == 'ERROR':
         sys.exit('[{0}]: {1} - {2}'.format(level, localtime, text))
-    print('[{0}]: {1} - {2}'.format(level, localtime, text))
+    print('\n[{0}]: {1} - {2}'.format(level, localtime, text))
 
 
 def get_db():
     try:
         # read connection parameters
         params = configuration.mdconfig()
-        db = psycopg2.connect(**params)
+        db_pool = psycopg2.pool.ThreadedConnectionPool(
+            1,
+            5,
+            user=params['user'],
+            password=params['password'],
+            host=params['host'],
+            port=params['port'],
+            database=params['database']
+        )
+        # db = psycopg2.connect(**params)
     except (Exception, psycopg2.DatabaseError) as error:
         log('ERROR', error)
-    return db
+    return db_pool, db_pool.getconn()
 
 
 def main():
-    db = get_db()
+    db_pool, db = get_db()
     curs = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
     curs.execute(
         """
@@ -88,7 +97,7 @@ def main():
                 precomputed += 1
     log('INFO', 'Pre-computed {0} variants / {1}'.format(precomputed, total))
     # db.close()
-    db.close()
+    db_pool.putconn(db)
 
 
 if __name__ == '__main__':

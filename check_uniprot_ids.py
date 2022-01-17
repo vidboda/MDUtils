@@ -25,7 +25,7 @@ def main():
         else:
             ncbi_api_key = args.ncbi_api_key
     # get db connector and cursor
-    db = get_db()
+    db_pool, db = get_db()
     curs = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
     i = 0
@@ -156,7 +156,7 @@ def main():
     log('INFO', '{} isoforms updated'.format(i))
 
     db.commit()
-    db.close()
+    db_pool.putconn(db)
 
 if __name__ == '__main__':
     main()

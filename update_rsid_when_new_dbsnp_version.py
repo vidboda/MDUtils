@@ -18,7 +18,7 @@ def main():
                         help='Path to the dbSNP file')
     args = parser.parse_args()
     if os.path.isfile(args.dbsnp_file):
-        db = get_db()
+        db_pool, db = get_db()
         curs = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
         curs.execute(
             """
@@ -65,6 +65,7 @@ def main():
                         i += 1
                         db.commit()
         log('INFO', '{0} rsids added'.format(i))
+        db_pool.putconn(db)
     else:
         log('ERROR', 'Your input file was not found {0}'.format(args.dbsnp_file))
 

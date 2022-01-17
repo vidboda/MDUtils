@@ -45,7 +45,7 @@ def main():
         'User-Agent': 'python-requests Python/{}.{}.{}'.format(sys.version_info[0], sys.version_info[1], sys.version_info[2]),
     }
     # get db connector and cursor
-    db = get_db()
+    db_pool, db = get_db()
     curs = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
     # get local list of genes
     curs.execute(
@@ -167,7 +167,7 @@ def main():
                     # curs.execute(insert_gene)
                     # db.commit()
         print('.', end="", flush=True)
-    db.close()
+    db_pool.putconn(db)
 
 
 if __name__ == '__main__':

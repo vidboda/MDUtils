@@ -30,7 +30,9 @@ def main():
     log('INFO', 'Working with server {}'.format(remote_addr))
 
     # get db connector and cursor
-    db = get_db()
+    # db = get_db()
+    # curs = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    db_pool, db = get_db()
     curs = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
     # curs.execute(
     #    """
@@ -54,7 +56,6 @@ def main():
         """
         SELECT name, variant_creation
         FROM gene
-        WHERE variant_creation <> 'not_in_vv_json'
         ORDER BY name
         """
     )
@@ -103,6 +104,7 @@ def main():
                 """,
                 (transcript['variant_creation'], transcript['name'][1])
             )
+            db.commit()
             k += 1
             failed_genes.append('{}'.format(transcript['name'][1]))
             continue
@@ -133,7 +135,7 @@ def main():
                 """.format(transcript['name'][1])
             )
             db.commit()
-    db.close()
+    db_pool.putconn(db)
     log('INFO', '{0}/{1} transcripts reported a VV error'.format(j, num_transcripts))
     log('INFO', '{0}/{1} transcripts triggered an MD error:'.format(k, num_transcripts))
     log('INFO', failed_genes)
