@@ -56,6 +56,7 @@ def main():
         """
         SELECT name, variant_creation
         FROM gene
+        WHERE variant_creation = 'ok'
         ORDER BY name
         """
     )
