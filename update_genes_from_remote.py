@@ -90,7 +90,7 @@ def main():
         for key in api_response:
             # check general features such as hgnc id, second_name, strand and update all transcript of this gene at once for these features
             api_refgene = 'NULL'
-            if api_response['RefGene']:
+            if 'RefGene' in api_response:
                 api_refgene = 'NG_000000.0' if api_response['RefGene'] == 'No RefGene in MobiDetails' else api_response['RefGene']
             if key == 'Chr':
                 if api_response[key] != gene['chr']:
