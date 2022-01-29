@@ -155,7 +155,8 @@ def main():
                                 update_sql_transcript.append(' variant_creation = \'{0}\' '.format(api_response[key][key2]))
                     # update ?
                     if update_sql_transcript:
-                        update_sql_transcript = "UPDATE gene SET {0} WHERE name[2] = '{1}'".format(','.join(update_sql_transcript), currrent_nm)
+                        update_sql_transcript = "UPDATE gene SET {0} WHERE name[2] = '{1}'".format(','.join(update_sql_transcript.replace("None", "NULL")), currrent_nm)
+                        update_sql_transcript = update_sql_transcript.replace("'NULL'", "NULL")
                         # log('DEBUG', update_sql_transcript)
                         curs.execute(update_sql_transcript)
                         db.commit()
@@ -183,7 +184,7 @@ def main():
                         api_response['HGNCID']
                     ).replace("None", "NULL")
                     insert_gene = insert_gene.replace("'NULL'", "NULL")
-                    log('DEBUG', insert_gene)
+                    # log('DEBUG', insert_gene)
                     db.commit()
         # update all transcripts at once
         if update_sql_gene:
