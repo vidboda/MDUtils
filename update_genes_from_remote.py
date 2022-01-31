@@ -165,15 +165,15 @@ def main():
                     # insert
                     insert_gene = """
                     INSERT INTO gene (name, second_name, chr, strand, number_of_exons, hgnc_name, prot_size, uniprot_id, ng, np, enst, ensp, canonical, variant_creation, hgnc_id )
-                    VALUES ('{{\"{0}\",\"{1}\"}}', '{2}', '{3}', '{4}', {5}, '{6}', {7}, '{8}', '{9}', '{10}', '{11}', '{12}', '{13}', '{14}', {15})
+                    VALUES ('{{\"{0}\",\"{1}\"}}', E'{2}', '{3}', '{4}', {5}, E'{6}', {7}, '{8}', '{9}', '{10}', '{11}', '{12}', '{13}', '{14}', {15})
                     """.format(
                         api_response['HGNCSymbol'],
                         currrent_nm,
-                        gene['second_name'],
+                        gene['second_name'].replace("'", "\\\'") if gene['second_name'] else '',
                         api_response['Chr'],
                         api_response['Strand'],
                         api_response[currrent_nm]['numberOfExons'],
-                        api_response['HGNCName'].replace("'", "\\\'"),
+                        api_response['HGNCName'].replace("'", "\\\'") if api_response['HGNCName'] else '',
                         api_response[currrent_nm]['proteinSize'],
                         api_response[currrent_nm]['UNIPROT'],
                         api_refgene,
@@ -186,6 +186,7 @@ def main():
                     ).replace("None", "NULL")
                     insert_gene = insert_gene.replace("'NULL'", "NULL")
                     # log('DEBUG', insert_gene)
+                    curs.execute(insert_gene)
                     db.commit()
         # update all transcripts at once
         if update_sql_gene:
@@ -194,6 +195,13 @@ def main():
             curs.execute(update_sql_gene)
             db.commit()
         print('.', end="", flush=True)
+    curs.execute(
+        "UPDATE gene SET second_name IS NULL WHERE second_name = ''"
+    )
+    curs.execute(
+        "UPDATE gene SET hgnc_name IS NULL WHERE hgnc_name = ''"
+    )
+    db.commit()
     db_pool.putconn(db)
 
 
