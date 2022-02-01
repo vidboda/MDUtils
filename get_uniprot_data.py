@@ -29,7 +29,7 @@ def main():
     elif args.file:
         log('ERROR', 'Invalid input path for gene file, please check your command')
     # get db connector and cursor
-    db = get_db()
+    db_pool, db = get_db()
     curs = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
     http = urllib3.PoolManager(cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())
     if not id_file:
