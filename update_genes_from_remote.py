@@ -29,11 +29,11 @@ from MobiDetailsApp import md_utilities
 #         db_pool = psycopg2.pool.ThreadedConnectionPool(
 #             1,
 #             5,
-#             user='mobidetails',
-#             password='bio;info1',
-#             host='localhost',
-#             port='5433',
-#             database='mobidetailsstage'
+#             user='',
+#             password='',
+#             host='',
+#             port='',
+#             database=''
 #         )
 #         # db = psycopg2.connect(**params)
 #     except (Exception, psycopg2.DatabaseError) as error:

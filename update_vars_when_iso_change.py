@@ -1,11 +1,9 @@
 import re
-import sys
 import argparse
 import psycopg2
 import psycopg2.extras
 import urllib3
 import certifi
-import time
 import datetime
 import json
 from precompute_spipv2 import get_db, log
