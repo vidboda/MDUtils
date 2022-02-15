@@ -132,7 +132,7 @@ def main():
                             update_sql_gene.append(' hgnc_id = {0} '.format(api_response[key]))
                     elif key == 'HGNCName':
                         if api_response[key] != gene['hgnc_name']:
-                            update_sql_gene.append(' hgnc_name = E\'{0}\' '.format(api_response[key].replace("'", "'''")))
+                            update_sql_gene.append(' hgnc_name = E\'{0}\' '.format(api_response[key].replace("'", "'")))
                     elif key == 'HGNCSymbol':
                         if api_response[key] != gene['gene_symbol']:
                             update_sql_gene.append(' name[1] = \'{0}\' '.format(api_response[key]))
@@ -201,7 +201,7 @@ def main():
                         """.format(
                             api_response['HGNCSymbol'],
                             currrent_nm,
-                            # gene['second_name'].replace("'", "''") if (isinstance(gene, dict) and gene['second_name']) else '',
+                            gene['second_name'].replace("'", "''") if (isinstance(gene, dict) and gene['second_name']) else '',
                             api_response['Chr'],
                             api_response['Strand'],
                             api_response[currrent_nm]['numberOfExons'],
