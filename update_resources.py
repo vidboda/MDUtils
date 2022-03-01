@@ -8,6 +8,8 @@ import requests
 import hashlib
 import time
 import datetime
+import json
+import shutil
 
 # connect to a distant resource and check whether or
 # not we should update - and updates
@@ -29,6 +31,7 @@ def get_last_md5_file(resource_dir, resource_type, resource_regexp, target_suffi
         if match_obj:
             dates.append(match_obj.group(1))
     current_resource = '{0}{1}_{2}{3}{4}.md5'.format(resource_dir, resource_type, max(dates), target_suffix, suffix)
+    # log('DEBUG', current_resource)
     with open(current_resource, 'r') as current_file:
         # print(clinvar_file.read())
         match_obj = re.search(r'^(\w+)\s', current_file.read())
@@ -164,26 +167,52 @@ def main():
         # current date
         current_date = datetime.datetime.today()
         date_string = '{0}{1}{2}'.format(current_date.year, current_date.strftime('%m'), current_date.strftime('%d'))
-        clingen_new_file = 'clingenCriteriaSpec_{}.json'.format(date_string)
+        clingen_new_file = 'clingenCriteriaSpec_{}'.format(date_string)
         download_file_from_server_endpoint(
             clingen_criteria_url,
-            '{0}clingen/{1}'.format(resources_path, clingen_new_file)
+            '{0}clingen/{1}.json'.format(resources_path, clingen_new_file)
         )
         # we need to md5 the new file and the current one
-        current_md5_value = get_last_md5_file('{}clingen/'.format(resources_path), 'clingenCriteriaSpec', r'clingenCriteriaSpec_(\d+)', '.json', '')
+        current_md5_value = get_last_md5_file('{}clingen/'.format(resources_path), 'clingenCriteriaSpec', r'clingenCriteriaSpec_(\d+)', '', '')
         BLOCKSIZE = 65536
         hasher = hashlib.md5()
-        with open('{0}clingen/{1}'.format(resources_path, clingen_new_file), 'rb') as clingen_file:
+        with open('{0}clingen/{1}.json'.format(resources_path, clingen_new_file), 'rb') as clingen_file:
             buf = clingen_file.read(BLOCKSIZE)
             while len(buf) > 0:
                 hasher.update(buf)
                 buf = clingen_file.read(BLOCKSIZE)
+        clingen_file.close()
         if hasher.hexdigest() != current_md5_value:
             log('INFO', 'New Clingen file found')
             # create the md5 file
             new_md5 = open('{0}clingen/{1}.md5'.format(resources_path, clingen_new_file), "w")
             new_md5.write('{0} {1}'.format(hasher.hexdigest(), clingen_new_file))
+            new_md5.close()
             log('INFO', 'New Clingen file ready and hashed')
+            # generate txt file containing the gene symbols list ("index")
+            with open('{0}clingen/{1}.json'.format(resources_path, clingen_new_file), 'r') as clingen_file:
+                clingen_json = json.load(clingen_file)
+            genes_symbols_file = open('{0}clingen/{1}.txt'.format(resources_path, clingen_new_file), "w")
+            if 'data' in clingen_json:
+                for rule in clingen_json['data']:
+                    if 'genes' in rule:
+                        for gene in rule['genes']:
+                            if 'label' in gene:
+                                genes_symbols_file.write('{0}\n'.format(gene['label']))
+                            else:
+                                log('WARNING', 'No gene symbol in gene key {0} from rule {1}'.format(gene, rule))
+                    else:
+                        log('WARNING', 'No gene in key {0}'.format(rule))
+            else:
+                log('ERROR', 'No data in the new Cligen File - erasing')
+                os.remove('{0}clingen/{1}.md5'.format(resources_path, clingen_new_file))
+                os.remove('{0}clingen/{1}'.format(resources_path, clingen_new_file))
+            genes_symbols_file.close()
+            shutil.copyfile('{0}clingen/{1}.json'.format(resources_path, clingen_new_file), '{0}clingen/clingenCriteriaSpec_last.json'.format(resources_path))
+            shutil.copyfile('{0}clingen/{1}.md5'.format(resources_path, clingen_new_file), '{0}clingen/clingenCriteriaSpec_last.md5'.format(resources_path))
+            shutil.copyfile('{0}clingen/{1}.txt'.format(resources_path, clingen_new_file), '{0}clingen/clingenCriteriaSpec_last.txt'.format(resources_path))
+            log('INFO', 'New files processed and ready for use.')
+
     if args.dbsnp:
         # get dbsnp version from https://ftp.ncbi.nih.gov/snp/latest_release/release_notes.txt
         download_file_from_server_endpoint(
