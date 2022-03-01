@@ -192,6 +192,7 @@ def main():
             # generate txt file containing the gene symbols list ("index")
             with open('{0}clingen/{1}.json'.format(resources_path, clingen_new_file), 'r') as clingen_file:
                 clingen_json = json.load(clingen_file)
+            clingen_file.close()
             genes_symbols_file = open('{0}clingen/{1}.txt'.format(resources_path, clingen_new_file), "w")
             if 'data' in clingen_json:
                 for rule in clingen_json['data']:
