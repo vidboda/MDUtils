@@ -41,7 +41,7 @@ def main():
             log('ERROR', 'Unknown API key')
         username = res_user['username']
         log('INFO', 'User: {}'.format(username))
-    match_obj = re.search(r'^([\w-]+)$', args.gene_name)
+    match_obj = re.search(r'^([\w-]+)$', args.gene_symbol)
     if match_obj:
         gene_symbol = match_obj.group(1)
     else:
@@ -63,7 +63,7 @@ def main():
     )
     res = curs.fetchone()
     if res is None:
-        log('ERROR', 'The gene {} is not present in MobiDetails, please check it'.format(gene_name))
+        log('ERROR', 'The gene {} is not present in MobiDetails, please check it'.format(gene_symbol))
     nm = res['refseq']
     # nm_full = res['nm']
     # get all variants
