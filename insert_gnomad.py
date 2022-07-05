@@ -52,18 +52,31 @@ def main():
                 # does not exists => creation
                 i += 1
                 # postGene = '{"' + mdNMFirst['gene_symbol'] + '","' + mdNMFirst['refseq'] + '"}'
+                # oeValues = {
+                #     'gene_symbol': mdNMFirst['gene_symbol'],
+                #     'refseq': mdNMFirst['refseq'],
+                #     'synoe': geneLineList[13],
+                #     'synlower': geneLineList[24],
+                #     'synupper': geneLineList[25],
+                #     'misoe': geneLineList[4],
+                #     'mislower': geneLineList[26],
+                #     'misupper': geneLineList[27],
+                #     'lofoe': geneLineList[23],
+                #     'loflower': geneLineList[28],
+                #     'lofupper': geneLineList[29]
+                # }
                 oeValues = {
                     'gene_symbol': mdNMFirst['gene_symbol'],
                     'refseq': mdNMFirst['refseq'],
-                    'synoe': geneLineList[13],
-                    'synlower': geneLineList[24],
-                    'synupper': geneLineList[25],
-                    'misoe': geneLineList[4],
-                    'mislower': geneLineList[26],
-                    'misupper': geneLineList[27],
-                    'lofoe': geneLineList[23],
-                    'loflower': geneLineList[28],
-                    'lofupper': geneLineList[29]
+                    'gnomad_syn_oe_avg': geneLineList[13],
+                    'gnomad_syn_oe_min': geneLineList[24],
+                    'gnomad_syn_oe_max': geneLineList[25],
+                    'gnomad_mis_oe_avg': geneLineList[4],
+                    'gnomad_mis_oe_min': geneLineList[26],
+                    'gnomad_mis_oe_max': geneLineList[27],
+                    'gnomad_lof_oe_avg': geneLineList[23],
+                    'gnomad_lof_oe_min': geneLineList[28],
+                    'gnomad_lof_oe_max': geneLineList[29]
                 }
                 for oeval in oeValues:
                     try:
