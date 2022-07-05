@@ -54,7 +54,7 @@ def main():
 
     curs.execute(
         """
-        SELECT name, variant_creation
+        SELECT gene_symbol, refseq, variant_creation
         FROM gene
         WHERE variant_creation = 'ok'
         ORDER BY name
@@ -76,7 +76,7 @@ def main():
         # variant = '{0}.{1}:c.1A>T'.format(gene['name'][1], gene['nm_version'])
         # md_url = '{0}/api/variant/create/{1}/{2}'.format(remote_addr, variant, api_key)
         md_url = '{0}/api/variant/create'.format(remote_addr)
-        variant_chgvs = '{0}:c.2del'.format(transcript['name'][1])
+        variant_chgvs = '{0}:c.2del'.format(transcript['refseq'])
         data = {
             'variant_chgvs': urllib.parse.quote(variant_chgvs),
             'caller': 'cli',
@@ -87,9 +87,9 @@ def main():
             """
             UPDATE gene
             SET variant_creation = 'ok'
-            WHERE name[2] = %s
+            WHERE refseq = %s
             """,
-            (transcript['name'][1],)
+            (transcript['refseq'],)
         )
         db.commit()
         try:
@@ -101,17 +101,17 @@ def main():
                 """
                 UPDATE gene
                 SET variant_creation = %s
-                WHERE name[2] = %s
+                WHERE refseq = %s
                 """,
-                (transcript['variant_creation'], transcript['name'][1])
+                (transcript['variant_creation'], transcript['refseq'])
             )
             db.commit()
             k += 1
-            failed_genes.append('{}'.format(transcript['name'][1]))
+            failed_genes.append('{}'.format(transcript['refseq']))
             continue
         if 'mobidetails_error' in md_response:
             j += 1
-            log('WARNING', 'variant creation failed for transcript {0} with error {1}'.format(transcript['name'][1], md_response['mobidetails_error']))
+            log('WARNING', 'variant creation failed for transcript {0} with error {1}'.format(transcript['refseq'], md_response['mobidetails_error']))
             # put back transcript state as it was
             variant_creation_status = transcript['variant_creation']
             if variant_creation_status == 'ok':
@@ -122,9 +122,9 @@ def main():
                 """
                 UPDATE gene
                 SET variant_creation = %s
-                WHERE name[2] = %s
+                WHERE refseq = %s
                 """,
-                (variant_creation_status, transcript['name'][1])
+                (variant_creation_status, transcript['refseq'])
             )
             db.commit()
         elif 'mobidetails_id' in md_response and transcript['variant_creation'] != 'ok':
@@ -132,8 +132,8 @@ def main():
                 """
                 UPDATE gene
                 SET variant_creation = 'ok'
-                WHERE name[2] = '{}'
-                """.format(transcript['name'][1])
+                WHERE refseq = '{}'
+                """.format(transcript['refseq'])
             )
             db.commit()
     db_pool.putconn(db)

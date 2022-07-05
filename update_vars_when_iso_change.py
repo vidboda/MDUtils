@@ -17,7 +17,7 @@ def main():
                                      usage='update_vars_when_iso_change.py -k md_api_key -g gene_hgnc')
     parser.add_argument('-k', '--api-key', default='', required=True,
                         help='Your API key visible on your profile page on the website.')
-    parser.add_argument('-g', '--gene-name', default='', required=True,
+    parser.add_argument('-g', '--gene-symbol', default='', required=True,
                         help='The gene you want to update the variants from.')
     args = parser.parse_args()
     db_pool, db = get_db()
@@ -43,7 +43,7 @@ def main():
         log('INFO', 'User: {}'.format(username))
     match_obj = re.search(r'^([\w-]+)$', args.gene_name)
     if match_obj:
-        gene_name = match_obj.group(1)
+        gene_symbol = match_obj.group(1)
     else:
         log('ERROR', 'Invalid gene name, please check it')
     # date
@@ -54,17 +54,17 @@ def main():
     # check if gene exists and get new canonical isoform
     curs.execute(
         """
-        SELECT DISTINCT(name[2]) AS nm
+        SELECT DISTINCT(refseq)
         FROM gene
-        WHERE name[1] = %s
+        WHERE gene_symbol = %s
             AND canonical = 't'
         """,
-        (gene_name,)
+        (gene_symbol,)
     )
     res = curs.fetchone()
     if res is None:
         log('ERROR', 'The gene {} is not present in MobiDetails, please check it'.format(gene_name))
-    nm = res['nm']
+    nm = res['refseq']
     # nm_full = res['nm']
     # get all variants
     curs.execute(
@@ -78,12 +78,12 @@ def main():
             b.id
         FROM variant a, variant_feature b
         WHERE a.feature_id = b.id
-            AND b.gene_name[1] = %s
-            AND b.gene_name[2] != %s
+            AND b.gene_symbol = %s
+            AND b.refseq != %s
             AND a.genome_version = 'hg38'
         ORDER BY a.pos
         """,
-        (gene_name, nm)
+        (gene_symbol, nm)
     )
     res = curs.fetchall()
     if res is None:
@@ -109,7 +109,7 @@ def main():
                     curs.execute(
                         """
                         UPDATE variant_feature
-                        SET gene_name[2] = %s, creation_date = %s
+                        SET refseq = %s, creation_date = %s
                         WHERE id = %s
                         """,
                         (nm, creation_date, var['id'])
@@ -185,7 +185,7 @@ def main():
                         curs.execute(
                             """
                             UPDATE variant_feature
-                            SET gene_name[2] = %s,
+                            SET refseq = %s,
                                 c_name = %s,
                                 p_name = %s,
                                 start_segment_type = %s,
@@ -201,7 +201,7 @@ def main():
                         curs.execute(
                             """
                             UPDATE variant_feature
-                            SET gene_name[2] = %s,
+                            SET refseq = %s,
                                 c_name = %s,
                                 p_name = %s,
                                 ivs_name = %s,

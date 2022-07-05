@@ -95,9 +95,9 @@ def main():
                     log('INFO', '{0}/{1} genes checked'.format(i, count))
                 curs.execute(
                     """
-                    SELECT DISTINCT(name[1]) AS gene_symbol, second_name, chr, hgnc_id, ng, strand, hgnc_name
+                    SELECT DISTINCT(gene_symbol), second_name, chr, hgnc_id, ng, strand, hgnc_name
                     FROM gene
-                    WHERE name[1] = %s
+                    WHERE gene_symbol = %s
                     """,
                     (gene_symbol,)
                 )
@@ -126,7 +126,7 @@ def main():
                                     update_sql_gene.append(' hgnc_name = E\'{0}\' '.format(api_response[key].replace("'", "''")))
                             elif key == 'HGNCSymbol':
                                 if api_response[key] != gene['gene_symbol']:
-                                    update_sql_gene.append(' name[1] = \'{0}\' '.format(api_response[key]))
+                                    update_sql_gene.append(' gene_symbol = \'{0}\' '.format(api_response[key]))
                             elif key == 'RefGene':
                                 if api_refgene != gene['ng']:
                                     update_sql_gene.append(' ng = \'{0}\' '.format(api_refgene))
@@ -143,7 +143,7 @@ def main():
                             currrent_nm = nm_obj.group(1)
                             # log('DEBUG', nm_obj.group(1))
                             curs.execute(
-                                "SELECT * FROM gene WHERE name[2] = %s",
+                                "SELECT * FROM gene WHERE refseq = %s",
                                 (currrent_nm,)
                             )
                             prod_nm = curs.fetchone()
@@ -178,7 +178,7 @@ def main():
                                             update_sql_transcript.append(' variant_creation = \'{0}\' '.format(api_response[key][key2]))
                                 # update ?
                                 if update_sql_transcript:
-                                    update_sql_transcript = "UPDATE gene SET {0} WHERE name[2] = '{1}'".format(','.join(update_sql_transcript), currrent_nm)
+                                    update_sql_transcript = "UPDATE gene SET {0} WHERE refseq = '{1}'".format(','.join(update_sql_transcript), currrent_nm)
                                     update_sql_transcript = update_sql_transcript.replace("None", "NULL")
                                     update_sql_transcript = update_sql_transcript.replace("'NULL'", "NULL")
                                     # log('DEBUG', update_sql_transcript)
@@ -187,8 +187,8 @@ def main():
                             else:
                                 # insert
                                 insert_gene = """
-                                INSERT INTO gene (name, second_name, chr, strand, number_of_exons, hgnc_name, prot_size, uniprot_id, ng, np, enst, ensp, canonical, variant_creation, hgnc_id )
-                                VALUES ('{{\"{0}\",\"{1}\"}}', E'{2}', '{3}', '{4}', {5}, E'{6}', {7}, '{8}', '{9}', '{10}', '{11}', '{12}', '{13}', '{14}', {15})
+                                INSERT INTO gene (gene_symbol, refseq, second_name, chr, strand, number_of_exons, hgnc_name, prot_size, uniprot_id, ng, np, enst, ensp, canonical, variant_creation, hgnc_id )
+                                VALUES ('{0}', '{1}', E'{2}', '{3}', '{4}', {5}, E'{6}', {7}, '{8}', '{9}', '{10}', '{11}', '{12}', '{13}', '{14}', {15})
                                 """.format(
                                     api_response['HGNCSymbol'],
                                     currrent_nm,
@@ -213,7 +213,7 @@ def main():
                                 db.commit()
                     # update all transcripts at once
                     if update_sql_gene:
-                        update_sql_gene = "UPDATE gene SET {0} WHERE name[1] = '{1}'".format(','.join(update_sql_gene), gene['gene_symbol'])
+                        update_sql_gene = "UPDATE gene SET {0} WHERE gene_symbol = '{1}'".format(','.join(update_sql_gene), gene['gene_symbol'])
                         # log('DEBUG', update_sql_gene)
                         curs.execute(update_sql_gene)
                         db.commit()

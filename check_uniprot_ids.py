@@ -32,7 +32,11 @@ def main():
 
     http = urllib3.PoolManager(cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())
     curs.execute(
-        "SELECT name, np, uniprot_id, prot_size FROM gene ORDER BY name"
+        """
+        SELECT gene_symbol, refseq, np, uniprot_id, prot_size
+        FROM gene
+        ORDER BY name
+        """
     )
     res = curs.fetchall()
     count = curs.rowcount
@@ -83,14 +87,14 @@ def main():
                                 """
                                 UPDATE gene
                                 SET uniprot_id = '{0}'
-                                WHERE name[2] = '{1}'
-                                """.format(uniprot_response[0]['accession'], gene['name'][1])
+                                WHERE refseq = '{1}'
+                                """.format(uniprot_response[0]['accession'], gene['refseq'])
                             )
                             db.commit()
                             # print("UPDATE gene SET uniprot_id = '{0}' WHERE name[2] = '{1}'".format(uniprot_response[0]['accession'], gene['name'][1]))
                             log('WARNING', 'Updated gene UNIPROT ID of {0} - {1} from {2} to {3}'.format(
-                                gene['name'][0],
-                                gene['name'][1],
+                                gene['gene_symbol'],
+                                gene['refseq'],
                                 gene['uniprot_id'],
                                 uniprot_response[0]['accession']
                             ))
@@ -99,11 +103,11 @@ def main():
                         log('WARNING', 'md_uniprot_id: {0} - RefSeq: {1} - {2} - {3} :not checked'.format(
                                 gene['uniprot_id'],
                                 gene['np'],
-                                gene['name'][1],
-                                gene['name'][0]
+                                gene['gene_symbol'],
+                                gene['refseq']
                             ))
                 except Exception:
-                    log('WARNING', 'no UNIPROT ID {0} for {1} - {2}'.format(uniprot_response, gene['name'][1], gene['name'][0]))
+                    log('WARNING', 'no UNIPROT ID {0} for {1} - {2}'.format(uniprot_response, gene['refseq'], gene['gene_symbol']))
                 # get prot size from eutils
                 ncbi_url = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=protein&id={0}&rettype=gp&complexity=3&api_key={1}'.format(gene['np'], ncbi_api_key)
                 prot_size = -1
@@ -141,22 +145,23 @@ def main():
                         UPDATE gene
                         SET prot_size = '{0}'
                         WHERE name[2] = '{1}'
-                        """.format(prot_size, gene['name'][1])
+                        """.format(prot_size, gene['refseq'])
                     )
                     log('WARNING', 'Updated protein size for gene {0} - {1} - {2} to {3}'.format(
-                        gene['name'][0],
-                        gene['name'][1],
+                        gene['gene_symbol'],
+                        gene['refseq'],
                         gene['uniprot_id'],
                         prot_size
                     ))
             else:
                 log('WARNING', 'pb w/ NP acc no {}'.format(gene['np']))
         else:
-            log('WARNING', 'No NP for {}'.format(gene['name'][1]))
+            log('WARNING', 'No NP for {}'.format(gene['refseq']))
     log('INFO', '{} isoforms updated'.format(i))
 
     db.commit()
     db_pool.putconn(db)
+
 
 if __name__ == '__main__':
     main()
