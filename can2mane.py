@@ -2,7 +2,6 @@ import json
 import psycopg2
 import psycopg2.extras
 from precompute_spipv2 import get_db, log
-# requires MobiDetails config module + database.ini file
 from MobiDetailsApp import md_utilities
 
 
@@ -12,7 +11,7 @@ def update_canonical(gene_symbol, transcript, curs, db):
         """
         UPDATE gene
         SET canonical = 'f'
-        WHERE name[1] = %s
+        WHERE gene_symbol = %s
         """,
         (gene_symbol,)
     )
@@ -20,7 +19,7 @@ def update_canonical(gene_symbol, transcript, curs, db):
         """
         UPDATE gene
         SET canonical = 't'
-        WHERE name[2] = %s
+        WHERE refseq = %s
         """,
         (transcript,)
     )
@@ -29,19 +28,19 @@ def update_canonical(gene_symbol, transcript, curs, db):
 
 
 def main():
-    db = get_db()
+    db_pool, db = get_db()
     curs = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
     curs.execute(  # get each gene
         """
-        SELECT DISTINCT(name[1]) AS gene_symbol
+        SELECT DISTINCT(gene_symbol)
         FROM gene
-        ORDER BY name[1]
+        ORDER BY gene_symbol
         """
     )
     genes = curs.fetchall()
     for gene in genes:
         curs.execute(  # get each transcript
-            "SELECT name, canonical FROM gene WHERE name[1] = %s",
+            "SELECT gene_symbol, refseq, canonical FROM gene WHERE gene_symbol = %s",
             (gene['gene_symbol'],)
         )
         transcripts = curs.fetchall()
@@ -63,7 +62,7 @@ def main():
                         break
                     for md_transcript in transcripts:
                         # need to check vv isoforms against MD isoforms to keep only relevant ones
-                        if vv_transcript['reference'] == md_transcript['name'][1]:
+                        if vv_transcript['reference'] == md_transcript['refseq']:
                             # log('DEBUG', 'VV:{0}-MD:{1}'.format(vv_transcript['reference'], md_transcript['name'][1]))
                             # MANE and canonical
                             if 'mane_select' in vv_transcript['annotations'] and \
@@ -75,7 +74,7 @@ def main():
                                     vv_transcript['annotations']['mane_select'] is True and \
                                     md_transcript['canonical'] is False:
                                 # update
-                                update_canonical(gene['gene_symbol'], md_transcript['name'][1], curs, db)
+                                update_canonical(gene['gene_symbol'], md_transcript['refseq'], curs, db)
                                 transcript_checked = 1
                                 break
                             if 'mane_select' not in vv_transcript['annotations']:
@@ -91,7 +90,7 @@ def main():
                 log('WARNING', 'No transcript in VV file for {0}'.format(gene['gene_symbol']))
         else:
             log('WARNING', 'No VV file for {0}'.format(gene['gene_symbol']))
-    db.close()
+    db_pool.putconn(db)
 
 
 if __name__ == '__main__':

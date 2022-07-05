@@ -41,31 +41,31 @@ def main():
     db_pool, db = get_db()
     curs = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
     if not gene_file:
-        curs.execute(  # get genes - one transcript per gene (canonical) - allows update of all trasncripts
+        curs.execute(  # get genes - one transcript per gene (canonical) - allows update of all transcripts
             """
-            SELECT name, second_name, hgnc_name, np, chr, number_of_exons, ng, hgnc_id, strand, uniprot_id
+            SELECT gene_symbol, refseq, second_name, hgnc_name, np, chr, number_of_exons, ng, hgnc_id, strand, uniprot_id
             FROM gene
             WHERE canonical = 't'
-            ORDER by name[1]
+            ORDER by gene_symbol
             """  # " ORDER BY random()"
         )
         #  WHERE canonical = 't'
     else:
         log('INFO', 'The following genes will be considered {0}'.format(gene_list))
-        curs.execute(  # get genes - one transcript per gene (canonical) - allows update of all trasncripts from the list
+        curs.execute(  # get genes - one transcript per gene (canonical) - allows update of all transcripts from the list
             """
-            SELECT name, second_name, hgnc_name, np, chr, number_of_exons, ng, hgnc_id, strand, uniprot_id
+            SELECT gene_symbol, refseq, second_name, hgnc_name, np, chr, number_of_exons, ng, hgnc_id, strand, uniprot_id
             FROM gene
             WHERE canonical = 't'
-                AND name[1] IN ({0})
-            ORDER by name[1]
+                AND gene_symbol IN ({0})
+            ORDER by gene_symbol
             """.format(gene_list)  # " ORDER BY random()"
         )
     genes = curs.fetchall()
     count = curs.rowcount
     i = 0
     for gene in genes:
-        log('DEBUG', '{}-{}'.format(gene['name'][0], i))
+        # log('DEBUG', '{}-{}'.format(gene['name'][0], i))
         i += 1
         if i % 500 == 0:
             log('INFO', '{0}/{1} genes checked'.format(i, count))
@@ -87,41 +87,41 @@ def main():
         db.commit()
         # get VV info for the gene
         http = urllib3.PoolManager(cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())
-        vv_url = "{0}/VariantValidator/tools/gene2transcripts/{1}?content-type=application/json".format(vv_url_base, gene['name'][1])
+        vv_url = "{0}/VariantValidator/tools/gene2transcripts/{1}?content-type=application/json".format(vv_url_base, gene['refseq'])
         # log('DEBUG', 'Calling VariantValidator gene API: {}'.format(vv_url))
         try:
             vv_data = json.loads(http.request('GET', vv_url).data.decode('utf-8'))
         except Exception:
-            log('WARNING', 'No value for {0}'.format(gene['name'][0]))
+            log('WARNING', 'No value for {0}'.format(gene['gene_symbol']))
             # disable in MD
             curs.execute(
                 """
                 UPDATE gene
                 SET variant_creation = 'not_in_vv_json'
-                WHERE name[1] = %s
+                WHERE gene_symbol = %s
                 """,
-                (gene['name'][0],)
+                (gene['gene_symbol'],)
             )
             db.commit()
             continue
         # Store json file in /mobidic_resources/variantValidator/genes/
         if 'error' in vv_data:
-            log('WARNING', 'VV error for gene {0}'.format(gene['name'][0]))
+            log('WARNING', 'VV error for gene {0}'.format(gene['gene_symbol']))
             # try querying by HGNC symbol instead of refseq
-            vv_url = "{0}/VariantValidator/tools/gene2transcripts/{1}?content-type=application/json".format(vv_url_base, gene['name'][0])
+            vv_url = "{0}/VariantValidator/tools/gene2transcripts/{1}?content-type=application/json".format(vv_url_base, gene['gene_symbol')
             # log('DEBUG', 'Calling VariantValidator gene API: {}'.format(vv_url))
             try:
                 vv_data = json.loads(http.request('GET', vv_url).data.decode('utf-8'))
             except Exception:
-                log('WARNING', 'No value for {0}'.format(gene['name'][0]))
+                log('WARNING', 'No value for {0}'.format(gene['gene_symbol']))
                 # disable in MD
                 curs.execute(
                     """
                     UPDATE gene
                     SET variant_creation = 'not_in_vv_json'
-                    WHERE name[1] = %s
+                    WHERE gene_symbol = %s
                     """,
-                    (gene['name'][0],)
+                    (gene['gene_symbol'],)
                 )
                 db.commit()
                 continue
@@ -130,23 +130,23 @@ def main():
                     """
                     UPDATE gene
                     SET variant_creation = 'not_in_vv_json'
-                    WHERE name[1] = %s
+                    WHERE gene_symbol = %s
                     """,
-                    (gene['name'][0],)
+                    (gene['gene_symbol'],)
                 )
                 db.commit()
                 continue
         if not os.path.isfile(
             '{0}{1}.json'.format(
                 md_utilities.local_files['variant_validator']['abs_path'],
-                gene['name'][0]
+                gene['gene_symbol']
             )
                 ):
             # copy in file system
             with open(
                 '{0}{1}.json'.format(
                     md_utilities.local_files['variant_validator']['abs_path'],
-                    gene['name'][0]
+                    gene['gene_symbol']
                 ),
                 "w",
                 encoding='utf-8'
@@ -157,7 +157,7 @@ def main():
                     ensure_ascii=False,
                     indent=4
                 )
-            log('INFO', "VV JSON file copied for gene {0}-{1}".format(gene['name'][0], gene['name'][1]))
+            log('INFO', "VV JSON file copied for gene {0}-{1}".format(gene['gene_symbol'], gene['refseq']))
         else:
             # md5 to check if there is an update
             new_vv_json_hash = hashlib.md5(json.dumps(vv_data, ensure_ascii=False, indent=4).encode()).hexdigest()
@@ -165,7 +165,7 @@ def main():
             current_vv_file_hash = hashlib.md5()
             current_vv_file = open('{0}{1}.json'.format(
                 md_utilities.local_files['variant_validator']['abs_path'],
-                gene['name'][0]
+                gene['gene_symbol']
             ), 'rb')
             current_vv_file_content = current_vv_file.read()
             current_vv_file_hash.update(current_vv_file_content)
@@ -173,34 +173,35 @@ def main():
             if new_vv_json_hash != current_vv_file_hash.hexdigest():
                 # copy new file
                 # copy in file system
-                with open(
-                    '{0}{1}.json'.format(
-                        md_utilities.local_files['variant_validator']['abs_path'],
-                        gene['name'][0]
-                    ),
-                    "w",
-                    encoding='utf-8'
-                ) as vv_file:
-                    json.dump(
-                        vv_data,
-                        vv_file,
-                        ensure_ascii=False,
-                        indent=4
-                    )
-                log('INFO', "VV JSON file replaced for gene {0}-{1}".format(gene['name'][0], gene['name'][1]))
-
-        # check prot name
+                # but check before that there is sthg in the file (not Internal Server Error to avoid replacing a good file with a bad)
+                if 'transcripts' in vv_data:
+                    with open(
+                        '{0}{1}.json'.format(
+                            md_utilities.local_files['variant_validator']['abs_path'],
+                            gene['gene_symbol']
+                        ),
+                        "w",
+                        encoding='utf-8'
+                    ) as vv_file:
+                        json.dump(
+                            vv_data,
+                            vv_file,
+                            ensure_ascii=False,
+                            indent=4
+                        )
+                    log('INFO', "VV JSON file replaced for gene {0}-{1}".format(gene['gene_symbol'], gene['refseq']))
+        # check hgnc name
         if 'current_name' in vv_data and \
                 'current_symbol' in vv_data:
-            if vv_data['current_symbol'] == gene['name'][0] and \
+            if vv_data['current_symbol'] == gene['gene_symbol'] and \
                     vv_data['current_name'] != gene['hgnc_name']:
                 curs.execute(
                     """
                     UPDATE gene
                     SET hgnc_name = %s
-                    WHERE name[1] = %s
+                    WHERE gene_symbol = %s
                     """,
-                    (vv_data['current_name'], gene['name'][0])
+                    (vv_data['current_name'], gene['gene_symbol'])
                 )
                 db.commit()
                 # log('INFO', "PROTEIN NAME UPDATE: gene {0} modified from {1} to {2}".format(gene['name'][0], gene['hgnc_name'], vv_data['current_name']))
@@ -213,9 +214,9 @@ def main():
                         """
                         UPDATE gene
                         SET np = %s
-                        WHERE name[2] = %s
+                        WHERE refseq = %s
                         """,
-                        (transcript['translation'], gene['name'][1])
+                        (transcript['translation'], gene['refseq'])
                     )
                 # update nb of exons and NP acc no
                 if ncbi_chr in transcript['genomic_spans'] and \
@@ -223,52 +224,56 @@ def main():
                     # if ncbi_chr in transcript['genomic_spans']:
                     nb_exons = transcript['genomic_spans'][ncbi_chr]['total_exons']
                     # log('DEBUG', '{0}-{1}'.format(transcript['reference'], gene['name'][1]))
-                    if transcript['reference'] == gene['name'][1]:
+                    if transcript['reference'] == gene['refseq']:
                         # log('DEBUG', 'Current #exons: {0} - VV #exons: {1}'.format(gene['number_of_exons'], nb_exons))
                         if int(nb_exons) != int(gene['number_of_exons']):
                             curs.execute(
-                                """"
+                                """
                                 UPDATE gene
                                 SET number_of_exons = %s
-                                WHERE name[2] = %s
+                                WHERE refseq = %s
                                 """,
-                                (nb_exons, gene['name'][1])
+                                (nb_exons, gene['refseq'])
                             )
-                            log('INFO', "NB EXONS UPDATE: gene {0}-{1} modified from {2} to {3}".format(gene['name'][0], gene['name'][1], gene['number_of_exons'], nb_exons))
+                            log('INFO', "NB EXONS UPDATE: gene {0}-{1} modified from {2} to {3}".format(gene['gene_symbol'], gene['refseq'], gene['number_of_exons'], nb_exons))
                         if transcript['translation'] != gene['np']:
                             curs.execute(
                                 """
                                 UPDATE gene
                                 SET np = %s
-                                WHERE name[2] = %s
+                                WHERE refseq = %s
                                 """,
-                                (transcript['translation'], gene['name'][1])
+                                (transcript['translation'], gene['refseq'])
                             )
-                            log('INFO', "NP UPDATE: gene {0} modified from {1} to {2}".format(gene['name'][0], gene['np'], transcript['translation']))
+                            log('INFO', "NP UPDATE: gene {0} modified from {1} to {2}".format(gene['gene_symbol'], gene['np'], transcript['translation']))
                         db.commit()
                     # if ncbi_chr in transcript['genomic_spans'] and \
                     #         hg19_ncbi_chr in transcript['genomic_spans']:
                         # continue
                     if re.search(r'^NM_\d+\.\d{1,2}$', transcript['reference']):
+                        not_new = 0
                         # transcript suitable for MD
                         match_object = re.search(r'^(N[MR]_\d+\.\d{1,2})', transcript['reference'])
                         if match_object:
                             nm_acc = match_object.group(1)
                             curs.execute(
                                 """
-                                SELECT name
+                                SELECT name, variant_creation
                                 FROM gene
-                                WHERE name[2] = %s
+                                WHERE refseq = %s
                                 """,
                                 (nm_acc,)
                             )
                             res_nm = curs.fetchone()
                             if res_nm:
-                                # trancript already recorded
-                                continue
+                                # trancript already recorded - check variant creation
+                                if res_nm['variant_creation'] == 'ok':
+                                    continue
+                                else:
+                                    not_new = 1
                             # NEED TO TEST IF THE TRANSCRIPT WORKS!!!!!
                         vv_url_var = "{0}/VariantValidator/variantvalidator/GRCh38/{1}:c.2del/all?content-type=application/json".format(vv_url_base, nm_acc)
-                        log('DEBUG', 'Calling VariantValidator API: {}'.format(vv_url_var))
+                        # log('DEBUG', 'Calling VariantValidator API: {}'.format(vv_url_var))
                         try:
                             vv_data_var = json.loads(http.request('GET', vv_url_var).data.decode('utf-8'))
                             # log('DEBUG', vv_data)
@@ -282,11 +287,13 @@ def main():
                                 """
                                 UPDATE gene
                                 SET variant_creation = 'vv_server_error'
-                                WHERE name[2] = %s
+                                WHERE refseq = %s
                                 """,
                                 (nm_acc,)
                             )
                             db.commit()
+                            # no need to update again
+                            not_new = 0
                         for first_level_key in vv_data_var:
                             if 'validation_warnings' in vv_data_var[first_level_key]:
                                 for warning in vv_data_var[first_level_key]['validation_warnings']:
@@ -294,10 +301,24 @@ def main():
                                             re.search(r'No transcript definition for', warning) or \
                                             re.search(r'No transcripts found', warning) or \
                                             re.search(r'expected one of', warning):
-                                        log('WARNING', "Cannot update gene {0} ({1}) because of {2}".format(gene['name'][0], nm_acc, warning))
+                                        log('WARNING', "Cannot update gene {0} ({1}) because of {2}".format(gene['gene_symbol'], nm_acc, warning))
                                         noupdate = 1
                                         break
-                        if not noupdate:
+                        if not noupdate and \
+                                not_new == 1:
+                            # if vv creation ok, update
+                            # ase of an existing gene which was identified as not_ok but now works
+                            curs.execute(
+                                """
+                                UPDATE gene
+                                SET variant_creation = 'ok'
+                                WHERE refseq = %s
+                                """,
+                                (nm_acc,)
+                            )
+                            db.commit()
+                        elif not noupdate and \
+                                not_new == 0:
                             # create new transcript and check if should become canonical
                             # we NEED
                             # name = {MD,VV} second_name = gene['second_name'], chr = gene['chr'], strand = gene['strand']
@@ -347,7 +368,7 @@ def main():
                             # log('DEBUG', 'ENST: {0} - ENSP: {1}'.format(insert_dict['enst'], insert_dict['ensp']))
                             # add transcript to MD
                             insert_dict['uniprot_id'] = 'NULL'
-                            if re.split(r'\.', gene['name'][1])[0] == re.split(r'\.', transcript['reference'])[0]:
+                            if re.split(r'\.', gene['refseq'])[0] == re.split(r'\.', transcript['reference'])[0]:
                                 # uniprot id
                                 if gene['uniprot_id']:
                                     insert_dict['uniprot_id'] = gene['uniprot_id']
@@ -360,44 +381,55 @@ def main():
                             #         t.join(map(str, insert_dict.values()))
                             #     ).replace("'NULL'", "NULL")
                             # )
+                            insert_dict['gene_symbol'] = gene['gene_symbol]
+                            insert_dict['refseq'] = transcript['reference']
                             curs.execute(
                                 """
-                                INSERT INTO gene (name, {0})
-                                VALUES ('{{\"{1}\",\"{2}\"}}', '{3}')
+                                INSERT INTO gene ({0})
+                                VALUES ('{1}')
                                 """.format(
                                     s.join(insert_dict.keys()),
-                                    gene['name'][0],
-                                    transcript['reference'],
                                     t.join(map(str, insert_dict.values()))
                                 ).replace("'NULL'", "NULL")
                             )
+                            # curs.execute(
+                            #     """
+                            #     INSERT INTO gene (name, {0})
+                            #     VALUES ('{{\"{1}\",\"{2}\"}}', '{3}')
+                            #     """.format(
+                            #         s.join(insert_dict.keys()),
+                            #         gene['name'][0],
+                            #         transcript['reference'],
+                            #         t.join(map(str, insert_dict.values()))
+                            #     ).replace("'NULL'", "NULL")
+                            # )
                             db.commit()
-                            if re.split(r'\.', gene['name'][1])[0] == re.split(r'\.', transcript['reference'])[0]:
+                            if re.split(r'\.', gene['refseq'])[0] == re.split(r'\.', transcript['reference'])[0]:
                                 # if (transcript['annotations']['refseq_select'] or
                                 #         transcript['annotations']['mane_select']) and \
-                                if re.split(r'\.', gene['name'][1])[1] < re.split(r'\.', transcript['reference'])[1]:
+                                if re.split(r'\.', gene['refseq'])[1] < re.split(r'\.', transcript['reference'])[1]:
                                     # reset MD canonical for this gene and set it for this transcript
                                     # log('INFO', 'Updating canonical for gene {0} from {1} to {2}'.format(gene['name'][0], gene['name'][1], transcript['reference']))
                                     curs.execute(
                                         """
                                         UPDATE gene
                                         SET canonical = 'f'
-                                        WHERE name[1] = %s
+                                        WHERE gene_symbol = %s
                                         """,
-                                        (gene['name'][0],)
+                                        (gene['gene_symbol'],)
                                     )
                                     curs.execute(
                                         """
                                         UPDATE gene
                                         SET canonical = 't'
-                                        WHERE name[2] = %s
+                                        WHERE refseq = %s
                                         """,
                                         (transcript['reference'],)
                                     )
                                     db.commit()
                 else:
                     if re.search(r'NM_\d+\.\d{1,2}', transcript['reference']):
-                        log('WARNING', 'Transcript {0} from gene {1} has hg19/38 mapping issues'.format(transcript['reference'], gene['name'][0]))
+                        log('WARNING', 'Transcript {0} from gene {1} has hg19/38 mapping issues'.format(transcript['reference'], gene['gene_symbol']))
                         default = 'hg19_mapping_default'
                         if ncbi_chr not in transcript['genomic_spans'] and \
                                 hg19_ncbi_chr not in transcript['genomic_spans']:
@@ -409,7 +441,7 @@ def main():
                             """
                             UPDATE gene
                             SET variant_creation = %s
-                            WHERE name[2] = %s
+                            WHERE refseq = %s
                             """,
                             (default, transcript['reference'])
                         )

@@ -18,13 +18,14 @@ def main():
     # HGNC:24086      A1CF    APOBEC1 complementation factor  protein-coding gene     gene with protein product       Approved
     # so we need id [0].split(':')[1], symbol [1], and validation [3] = protein-coding gene and [5] = Approved
     hgnc_file = open(md_utilities.local_files['hgnc_full_set']['abs_path'], 'r')
+    # hgnc_file = open('HGNC/hgnc_LRTOMT.txt', 'r')
     i = 0
     for line in hgnc_file:
         i += 1
         if i % 500 == 0:
             log('INFO', '{0}/{1} lines checked'.format(i, 42946))
         gene_info = re.split('\t', line)
-        match_id = re.search(r'HGNC:(\d+)', gene_info[0])
+        match_id = re.search(r'^HGNC:(\d+)', gene_info[0])
         if match_id:
             hgnc_id = match_id.group(1)
             # log('DEBUG', 'Status:{0}'.format(gene_info[4]))
@@ -40,7 +41,7 @@ def main():
                 curs = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
                 curs.execute(  # get genes - one transcript per gene (canonical) - allows update of all trasncripts
                     """
-                    SELECT name, hgnc_name, second_name
+                    SELECT gene_symbol, hgnc_name, second_name
                     FROM gene
                     WHERE hgnc_id = %s
                     """,
@@ -49,7 +50,7 @@ def main():
                 md_gene = curs.fetchone()
                 if md_gene:
                     # check symbol and name
-                    if md_gene['name'][0] != hgnc_current_symbol:
+                    if md_gene['gene_symbol'] != hgnc_current_symbol:
                         # log('DEBUG', 'Symbol differs for HGNC {0}, MD {1}'.format(hgnc_current_symbol, md_gene['name'][0]))
                         # get the one VV is using
                         download_vv_file(hgnc_current_symbol, hgnc_current_symbol)
@@ -67,12 +68,12 @@ def main():
                             curs.execute(
                                 """
                                 UPDATE gene
-                                SET name[1] = %s, second_name = %s || ',' || %s
+                                SET gene_symbol = %s, second_name = %s || ',' || %s
                                 WHERE hgnc_id = %s
                                 """,
                                 (
                                     hgnc_current_symbol,
-                                    md_gene['name'][0],
+                                    md_gene['gene_symbol'],
                                     md_gene['second_name'],
                                     hgnc_id
                                 )
@@ -166,21 +167,30 @@ def main():
                                         # afterwards need to look for genes with no canonical
                                         s = ", "
                                         t = "', '"
-                                        log('INFO', "INSERT INTO gene (name, {0}) VALUES ('{{\"{1}\",\"{2}\"}}', '{3}')".format(
+                                        insert_dict['gene_symbol'] = hgnc_current_symbol
+                                        insert_dict['refseq'] = vv_transcript['reference']
+                                        log('INFO', "INSERT INTO gene (gene_symbol, refseq, {0}) VALUES ('{1}')".format(
                                                 s.join(insert_dict.keys()),
-                                                hgnc_current_symbol,
-                                                vv_transcript['reference'],
                                                 t.join(map(str, insert_dict.values()))
                                             ).replace("'NULL'", "NULL")
                                             )
+                                        # curs.execute(
+                                        #     """
+                                        #     INSERT INTO gene (gene_symbol, refseq, {0})
+                                        #     VALUES ('{1}', '{2}', '{3}')
+                                        #     """.format(
+                                        #         s.join(insert_dict.keys()),
+                                        #         hgnc_current_symbol,
+                                        #         vv_transcript['reference'],
+                                        #         t.join(map(str, insert_dict.values()))
+                                        #     ).replace("'NULL'", "NULL")
+                                        # )
                                         curs.execute(
                                             """
-                                            INSERT INTO gene (name, {0})
-                                            VALUES ('{{\"{1}\",\"{2}\"}}', '{3}')
+                                            INSERT INTO gene ({0})
+                                            VALUES ('{1}')
                                             """.format(
                                                 s.join(insert_dict.keys()),
-                                                hgnc_current_symbol,
-                                                vv_transcript['reference'],
                                                 t.join(map(str, insert_dict.values()))
                                             ).replace("'NULL'", "NULL")
                                         )

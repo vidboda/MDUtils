@@ -44,7 +44,7 @@ def main():
     curs = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
     curs.execute(
         """
-        SELECT id, gene_name[1] AS symbol, gene_name[2] AS nm, c_name
+        SELECT id, gene_symbol, refseq, c_name
         FROM variant_feature
         ORDER BY RANDOM()
         LIMIT 2
@@ -66,7 +66,7 @@ def main():
             # tfout = tempfile.NamedTemporaryFile()
             tf.write(
                 bytes('gene\tvarID\n{0}\t{1}:c.{2}'.format(
-                    var['symbol'], var['nm'], var['c_name']
+                    var['gene_symbol'], var['refseq'], var['c_name']
                 ), encoding='utf-8')
             )
             # tf.write(b"gene    varID\nUSH2A  NM_206933:c.2276G>T")

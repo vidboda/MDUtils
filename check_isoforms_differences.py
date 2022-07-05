@@ -60,26 +60,26 @@ def main():
         # get genes w/ more than one isoform
         curs.execute(
             """
-            SELECT name[1] AS hgnc, name[2] AS nm
+            SELECT gene_symbol, refseq
             FROM gene
             WHERE canonical = 't'
-                AND name[1] IN (
-                    SELECT name[1]
+                AND gene_symbol IN (
+                    SELECT gene_symbol
                     FROM gene
-                    GROUP BY name[1]
-                    HAVING COUNT(name[1]) > 1
+                    GROUP BY gene_symbol
+                    HAVING COUNT(gene_symbol) > 1
                 )
-            ORDER by name[1]
+            ORDER by gene_symbol
             """
         )
         res = curs.fetchall()
         i = 0
         for gene in res:
             i += 1
-            log('INFO', 'Treating gene {0} - #{1}'.format(gene['hgnc'], i))
-            full_nm = gene['nm']
+            log('INFO', 'Treating gene {0} - #{1}'.format(gene['gene_symbol'], i))
+            full_nm = gene['refseq']
             base_url = "http://10.34.20.79"
-            md_url = '{0}/MD/api/gene/{1}'.format(base_url, gene['hgnc'])
+            md_url = '{0}/MD/api/gene/{1}'.format(base_url, gene['gene_symbol'])
             http = urllib3.PoolManager(cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())
             try:
                 md_data = json.loads(http.request('GET', md_url).data.decode('utf-8'))
@@ -96,31 +96,31 @@ def main():
                 if matchobj:
                     new_nm = matchobj.group(1)
                     if md_data[key]['canonical'] is True:
-                        diff[gene['hgnc']] = {
+                        diff[gene['gene_symbol']] = {
                             'old_can': full_nm,
                             'new_can': key
                         }
-                        log('INFO', 'updating canonical for {0}: {1} instead of {2}'.format(gene['hgnc'], key, full_nm))
+                        log('INFO', 'updating canonical for {0}: {1} instead of {2}'.format(gene['gene_symbol'], key, full_nm))
                         curs.execute(
                             """
                             UPDATE gene
                             SET canonical = 'f'
-                            WHERE name[1] = %s
+                            WHERE gene_symbol = %s
                             """,
-                            (gene['hgnc'],)
+                            (gene['gene_symbol'],)
                         )
                         curs.execute(
                             """
                             UPDATE gene
                             SET canonical = 't'
-                            WHERE name[2] = %s
+                            WHERE refseq = %s
                             """,
                             (new_nm,)
                         )
                         db.commit()
-                        cmd = "python3 update_vars_when_iso_change.py -k {0} -g {1}".format(api_key, gene['hgnc'])
+                        cmd = "python3 update_vars_when_iso_change.py -k {0} -g {1}".format(api_key, gene['gene_symbol'])
                         returned_value = subprocess.call(cmd, shell=True)
-                        log('INFO', 'Variants update returned value for {0}: {1}'.format(gene['hgnc'], returned_value))
+                        log('INFO', 'Variants update returned value for {0}: {1}'.format(gene['gene_symbol'], returned_value))
         pp = pprint.PrettyPrinter(indent=4)
         pp.pprint(diff)
     db.close()

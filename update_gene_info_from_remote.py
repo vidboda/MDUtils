@@ -51,14 +51,14 @@ def main():
     # get local list of genes with no canonical isoform defined
     curs.execute(
         """
-        SELECT DISTINCT(name[1]) AS hgnc
+        SELECT DISTINCT(gene_symbol)
         FROM gene
-        WHERE name[1] NOT IN (
-                SELECT name[1]
+        WHERE gene_symbol NOT IN (
+                SELECT gene_symbol
                 FROM gene
                 WHERE canonical='t'
             )
-        ORDER BY name[1]
+        ORDER BY gene_symbol
         """
     )
     no_can = curs.fetchall()
@@ -69,7 +69,7 @@ def main():
     # lacking_nm = []
 
     for gene in no_can:
-        req_url = '{0}/api/gene/{1}'.format(remote_addr, gene['hgnc'])
+        req_url = '{0}/api/gene/{1}'.format(remote_addr, gene['gene_symbol'])
         api_response = json.loads(http.request('GET', req_url, headers=header).data.decode('utf-8'))
         log('DEBUG', 'req_url:{0}'.format(req_url))
         # log('DEBUG', 'api_response:{0}'.format(api_response))
@@ -82,7 +82,7 @@ def main():
                         match_obj = re.search(r'(NM_\d+)\.\d+', keys)
                         nm_acc = match_obj.group(1)
                         curs.execute(
-                            "UPDATE gene set canonical = 't' WHERE name[2] = %s",
+                            "UPDATE gene set canonical = 't' WHERE refseq = %s",
                             (nm_acc,)
                         )
                         log('INFO', 'Updating {}'.format(nm_acc))
@@ -94,17 +94,17 @@ def main():
         # get genes with no variants and at least 2 isoforms to see if we need to update canonical
         curs.execute(
             """
-            SELECT name, canonical
+            SELECT gene_symbol, refseq, canonical
             FROM gene
-            WHERE (name[1] NOT IN (
-                SELECT gene_name[1]
+            WHERE (gene_symbol NOT IN (
+                SELECT gene_symbol
                 FROM variant_feature
                 ))
-                AND (name[1] IN (
-                    SELECT name[1]
+                AND (gene_symbol IN (
+                    SELECT gene_symbol
                     FROM gene
-                    GROUP BY name[1]
-                    HAVING COUNT (name[1]) > 1)
+                    GROUP BY gene_symbol
+                    HAVING COUNT (gene_symbol) > 1)
                 )
             ORDER BY name
             """
@@ -121,27 +121,27 @@ def main():
                             match_obj = re.search(r'(NM_\d+)\.\d+', keys)
                             nm_acc = match_obj.group(1)
                             # double check
-                            if nm_acc == acc['name'][1]:
+                            if nm_acc == acc['refseq']:
                                 curs.execute(
                                     """
                                     UPDATE gene
                                     SET canonical = 'f'
-                                    WHERE name[1] = %s
+                                    WHERE gene_symbol = %s
                                     """,
-                                    (acc['name'][0],)
+                                    (acc['gene_symbol'],)
                                 )
                                 # log('INFO', "UPDATE gene SET canonical = 'f' WHERE name[1] = '{}'".format(acc['name'][0]))
                                 curs.execute(
                                     """
                                     UPDATE gene
                                     SET canonical = 't'
-                                    WHERE name[2] = %s
+                                    WHERE refseq = %s
                                     """,
-                                    (acc['name'][1],)
+                                    (acc['refseq'],)
                                 )
                                 # log('INFO', "UPDATE gene SET canonical = 't' WHERE name[2] = '{}'".format(acc['name'][1]))
                                 i += 1
-                                log('INFO', 'Updated gene {}'.format(acc['name'][0]))
+                                log('INFO', 'Updated gene {}'.format(acc['gene_symbol']))
         db.commit()
 
         log('INFO', '{} genes modified (canonical all)'.format(i))
@@ -149,7 +149,7 @@ def main():
     if args.update_np:
         curs.execute(
             """
-            SELECT DISTINCT(name[1]) AS hgnc
+            SELECT DISTINCT(gene_symbol)
             FROM gene
             WHERE np = 'NP_000000.0'
             """
@@ -157,7 +157,7 @@ def main():
         no_np = curs.fetchall()
         j = 0
         for gene in no_np:
-            req_url = '{0}/api/gene/{1}'.format(remote_addr, gene['hgnc'])
+            req_url = '{0}/api/gene/{1}'.format(remote_addr, gene['gene_symbol'])
             api_response = json.loads(http.request('GET', req_url, headers=header).data.decode('utf-8'))
             for keys in api_response:
                 if isinstance(keys, dict):
@@ -168,7 +168,7 @@ def main():
                             nm_acc = match_obj.group(1)
                             np_acc = api_response[keys]['RefProtein']
                             curs.execute(
-                                "UPDATE gene set np = %s WHERE name[2] = %s",
+                                "UPDATE gene set np = %s WHERE refseq = %s",
                                 (np_acc, nm_acc)
                             )
                             log('INFO', 'Updating gene NP acc no of {0} to {1}'.format(nm_acc, np_acc))
@@ -178,7 +178,7 @@ def main():
     if args.update_uniprot or args.update_creation or args.update_nm or args.update_np_full or args.update_exons or args.update_gene_symbols:
         curs.execute(
             """
-            SELECT  name[1] aASs hgnc, name[2] AS nm, np, uniprot_id, variant_creation
+            SELECT  gene_symbol, refseq, np, uniprot_id, variant_creation
             FROM gene
             ORDER BY name
             """
@@ -187,7 +187,7 @@ def main():
         k = n = m = p = q = r = 0
         o = curs.rowcount
         for gene in res:
-            req_url = '{0}/api/gene/{1}'.format(remote_addr, gene['hgnc'])
+            req_url = '{0}/api/gene/{1}'.format(remote_addr, gene['gene_symbol'])
             api_response = json.loads(http.request('GET', req_url, headers=header).data.decode('utf-8'))
             n += 1
             if n % 1000 == 0:
@@ -197,7 +197,7 @@ def main():
                 if match_obj:
                     nm_acc = match_obj.group(1)
                     # check again
-                    if nm_acc == gene['nm']:
+                    if nm_acc == gene['refseq']:
                         # MDv1
                         # if args.update_nm:
                         #     nm_version = match_obj.group(2)
@@ -217,7 +217,7 @@ def main():
                                     """
                                     UPDATE gene
                                     SET uniprot_id = %s
-                                    WHERE name[2] = %s
+                                    WHERE refseq = %s
                                     """,
                                     (uniprot, nm_acc)
                                 )
@@ -230,7 +230,7 @@ def main():
                                     """
                                     UPDATE gene
                                     SET variant_creation = %s
-                                    WHERE name[2] = %s
+                                    WHERE refseq = %s
                                     """,
                                     (tag, nm_acc)
                                 )
@@ -243,7 +243,7 @@ def main():
                                     """
                                     UPDATE gene
                                     SET np = %s
-                                    WHERE name[2] = %s
+                                    WHERE refseq = %s
                                     """,
                                     (np, nm_acc)
                                 )
@@ -256,7 +256,7 @@ def main():
                                     """
                                     UPDATE gene
                                     SET number_of_exons = %s
-                                    WHERE name[2] = %s
+                                    WHERE refseq = %s
                                     """,
                                     (exons, nm_acc)
                                 )

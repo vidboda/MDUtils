@@ -28,11 +28,12 @@ def main():
         # print(geneLineList[0])
         curs.execute(  # exists in MD?
             """
-            SELECT name
+            SELECT gene_symbol, refseq
             FROM gene
-            WHERE name[1] = '{0}'
+            WHERE gene_symbol = %s
                 AND canonical = 't'
-            """.format(geneLineList[0])
+            """,
+            (geneLineList[0],)
             # number_of_exons IN (SELECT MAX(number_of_exons) FROM gene WHERE name[1] = '{0}')".format(geneLineList[0])
         )
         mdNMFirst = curs.fetchone()
@@ -40,17 +41,20 @@ def main():
             # print(mdNMFirst['nm'])
             curs.execute(
                 """
-                SELECT DISTINCT(gene_name[2])
+                SELECT DISTINCT(refseq)
                 FROM gene_annotation
-                WHERE gene_name[1] = '{}'
-                """.format(geneLineList[0])
+                WHERE gene_symbol = %s
+                """,
+                (geneLineList[0],)
             )  # exists in table gene_annotation? get a nm
             mdNMSecond = curs.fetchone()
             if mdNMSecond is None:
                 # does not exists => creation
                 i += 1
-                postGene = '{"' + mdNMFirst['name'][0] + '","' + mdNMFirst['name'][1] + '"}'
+                # postGene = '{"' + mdNMFirst['gene_symbol'] + '","' + mdNMFirst['refseq'] + '"}'
                 oeValues = {
+                    'gene_symbol': mdNMFirst['gene_symbol'],
+                    'refseq': mdNMFirst['refseq'],
                     'synoe': geneLineList[13],
                     'synlower': geneLineList[24],
                     'synupper': geneLineList[25],
@@ -67,24 +71,34 @@ def main():
                         oeValues[oeval] = "{:.2f}".format(oeValues[oeval])
                     except Exception:
                         next
-
+                s = ", "
+                t = "', '"
                 curs.execute(
                     """
-                    INSERT INTO gene_annotation
-                    VALUES('{0}','{1}','{2}','{3}','{4}','{5}','{6}','{7}','{8}','{9}')
+                    INSERT INTO gene_annotation ({0})
+                    VALUES ('{1}')
                     """.format(
-                        postGene,
-                        oeValues['synoe'],
-                        oeValues['synlower'],
-                        oeValues['synupper'],
-                        oeValues['misoe'],
-                        oeValues['mislower'],
-                        oeValues['misupper'],
-                        oeValues['lofoe'],
-                        oeValues['loflower'],
-                        oeValues['lofupper']
-                    )
+                        s.join(oeValues.keys()),
+                        t.join(map(str, oeValues.values()))
+                    ).replace("'NULL'", "NULL")
                 )
+                # curs.execute(
+                #     """
+                #     INSERT INTO gene_annotation
+                #     VALUES('{0}','{1}','{2}','{3}','{4}','{5}','{6}','{7}','{8}','{9}')
+                #     """.format(
+                #         postGene,
+                #         oeValues['synoe'],
+                #         oeValues['synlower'],
+                #         oeValues['synupper'],
+                #         oeValues['misoe'],
+                #         oeValues['mislower'],
+                #         oeValues['misupper'],
+                #         oeValues['lofoe'],
+                #         oeValues['loflower'],
+                #         oeValues['lofupper']
+                #     )
+                # )
 
     log('INFO', '{} annotations added'.format(i))
 
