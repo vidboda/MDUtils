@@ -86,6 +86,7 @@ def main():
                 encoding='utf-8'
             )
             gff_file.write(uniprot_response)
+        uniprot_interesting = ['Domain', 'Region', 'Motif', 'Zinc finger', 'Repeat'] # Compositional bias
         for line in open('{0}{1}.gff'.format(
             md_utilities.local_files['uniprot']['abs_path'],
             id
@@ -94,7 +95,9 @@ def main():
             if re.search(rf'^{id}\t', line):
                 info = re.split('\t', line)
                 # log('DEBUG', 'info: {0}'.format(info))
-                if info[2] == 'Domain':
+                # if info[2] == 'Domain':
+                if info[2] in uniprot_interesting and \
+                        re.search('=.+;', info[8]):
                     name = re.split('=', re.split(';', info[8])[0])[1]
                     # exists?
                     curs.execute(
@@ -112,6 +115,11 @@ def main():
                         )
                     )
                     res_exists = curs.fetchone()
+                    if info[2] != 'Domain':
+                        name = '{0}:{1}'.format(info[2], name)
+                    if len(name) > 79:
+                        # log('WARNING', 'name too long for {0}'.format(info))
+                        continue
                     if not res_exists:
                         # log('DEBUG', "INSERT INTO uniprot_domain (uniprot_id, aa_start, aa_end, name) VALUES ('{0}', '{1}', '{2}', '{3}')".format(
                         #     id,
