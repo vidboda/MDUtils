@@ -108,7 +108,7 @@ def main():
         if 'error' in vv_data:
             log('WARNING', 'VV error for gene {0}'.format(gene['gene_symbol']))
             # try querying by HGNC symbol instead of refseq
-            vv_url = "{0}/VariantValidator/tools/gene2transcripts/{1}?content-type=application/json".format(vv_url_base, gene['gene_symbol')
+            vv_url = "{0}/VariantValidator/tools/gene2transcripts/{1}?content-type=application/json".format(vv_url_base, gene['gene_symbol'])
             # log('DEBUG', 'Calling VariantValidator gene API: {}'.format(vv_url))
             try:
                 vv_data = json.loads(http.request('GET', vv_url).data.decode('utf-8'))
@@ -219,9 +219,9 @@ def main():
                         (transcript['translation'], gene['refseq'])
                     )
                 # update nb of exons and NP acc no
-                if ncbi_chr in transcript['genomic_spans'] and \
-                        hg19_ncbi_chr in transcript['genomic_spans']:
-                    # if ncbi_chr in transcript['genomic_spans']:
+                if ncbi_chr in transcript['genomic_spans']:
+                    #  and \
+                    #     hg19_ncbi_chr in transcript['genomic_spans']:
                     nb_exons = transcript['genomic_spans'][ncbi_chr]['total_exons']
                     # log('DEBUG', '{0}-{1}'.format(transcript['reference'], gene['name'][1]))
                     if transcript['reference'] == gene['refseq']:
@@ -258,7 +258,7 @@ def main():
                             nm_acc = match_object.group(1)
                             curs.execute(
                                 """
-                                SELECT name, variant_creation
+                                SELECT gene_symbol, variant_creation
                                 FROM gene
                                 WHERE refseq = %s
                                 """,
@@ -381,7 +381,7 @@ def main():
                             #         t.join(map(str, insert_dict.values()))
                             #     ).replace("'NULL'", "NULL")
                             # )
-                            insert_dict['gene_symbol'] = gene['gene_symbol]
+                            insert_dict['gene_symbol'] = gene['gene_symbol']
                             insert_dict['refseq'] = transcript['reference']
                             curs.execute(
                                 """
