@@ -223,7 +223,7 @@ def main():
                     #  and \
                     #     hg19_ncbi_chr in transcript['genomic_spans']:
                     nb_exons = transcript['genomic_spans'][ncbi_chr]['total_exons']
-                    # log('DEBUG', '{0}-{1}'.format(transcript['reference'], gene['name'][1]))
+                    # log('DEBUG', '{0}-{1}'.format(transcript['reference'], gene['refseq']))
                     if transcript['reference'] == gene['refseq']:
                         # log('DEBUG', 'Current #exons: {0} - VV #exons: {1}'.format(gene['number_of_exons'], nb_exons))
                         if int(nb_exons) != int(gene['number_of_exons']):
@@ -304,17 +304,22 @@ def main():
                                         log('WARNING', "Cannot update gene {0} ({1}) because of {2}".format(gene['gene_symbol'], nm_acc, warning))
                                         noupdate = 1
                                         break
+                        variant_creation = 'ok'
+                        if hg19_ncbi_chr not in transcript['genomic_spans']:
+                            # look for hg19_mapping_default which is now allowed but tagged
+                            variant_creation = 'hg19_mapping_default'
+                        # log('DEBUG', 'transcript: {0} - variant_creation: {1}').format()
                         if not noupdate and \
                                 not_new == 1:
                             # if vv creation ok, update
-                            # ase of an existing gene which was identified as not_ok but now works
+                            # case of an existing gene which was identified as not_ok but now works
                             curs.execute(
                                 """
                                 UPDATE gene
-                                SET variant_creation = 'ok'
+                                SET variant_creation = %s
                                 WHERE refseq = %s
                                 """,
-                                (nm_acc,)
+                                (variant_creation, nm_acc,)
                             )
                             db.commit()
                         elif not noupdate and \
@@ -337,7 +342,7 @@ def main():
                                 insert_dict['strand'] = '-'
                             insert_dict['np'] = transcript['translation']
                             insert_dict['hgnc_id'] = gene['hgnc_id']
-                            insert_dict['variant_creation'] = 'ok'
+                            insert_dict['variant_creation'] = variant_creation
                             insert_dict['number_of_exons'] = transcript['genomic_spans'][ncbi_chr]['total_exons']
                             insert_dict['hgnc_name'] = vv_data['current_name'].replace("'", "''")
                             insert_dict['prot_size'] = int((transcript['coding_end'] - transcript['coding_start'] + 1) / 3)-1
@@ -361,11 +366,6 @@ def main():
                                         if not re.search(r'^ENST\d+$', insert_dict['enst']):
                                             insert_dict['enst'] = 'NULL'
                                         break
-                            # if gene2ensembl:
-                            #     to_ensembl = re.split('\t', gene2ensembl)
-                            #     insert_dict['enst'] = re.split(r'\.', to_ensembl[4])[0]
-                            #     insert_dict['ensp'] = re.split(r'\.', to_ensembl[6])[0]
-                            # log('DEBUG', 'ENST: {0} - ENSP: {1}'.format(insert_dict['enst'], insert_dict['ensp']))
                             # add transcript to MD
                             insert_dict['uniprot_id'] = 'NULL'
                             if re.split(r'\.', gene['refseq'])[0] == re.split(r'\.', transcript['reference'])[0]:
@@ -374,13 +374,6 @@ def main():
                                     insert_dict['uniprot_id'] = gene['uniprot_id']
                             s = ", "
                             t = "', '"
-                            # log('INFO', "INSERT INTO gene (name, {0}) VALUES ('{{\"{1}\",\"{2}\"}}', '{3}')".format(
-                            #         s.join(insert_dict.keys()),
-                            #         gene['name'][0],
-                            #         transcript['reference'],
-                            #         t.join(map(str, insert_dict.values()))
-                            #     ).replace("'NULL'", "NULL")
-                            # )
                             insert_dict['gene_symbol'] = gene['gene_symbol']
                             insert_dict['refseq'] = transcript['reference']
                             curs.execute(
@@ -392,22 +385,12 @@ def main():
                                     t.join(map(str, insert_dict.values()))
                                 ).replace("'NULL'", "NULL")
                             )
-                            # curs.execute(
-                            #     """
-                            #     INSERT INTO gene (name, {0})
-                            #     VALUES ('{{\"{1}\",\"{2}\"}}', '{3}')
-                            #     """.format(
-                            #         s.join(insert_dict.keys()),
-                            #         gene['name'][0],
-                            #         transcript['reference'],
-                            #         t.join(map(str, insert_dict.values()))
-                            #     ).replace("'NULL'", "NULL")
-                            # )
                             db.commit()
-                            if re.split(r'\.', gene['refseq'])[0] == re.split(r'\.', transcript['reference'])[0]:
-                                # if (transcript['annotations']['refseq_select'] or
-                                #         transcript['annotations']['mane_select']) and \
-                                if re.split(r'\.', gene['refseq'])[1] < re.split(r'\.', transcript['reference'])[1]:
+                            log('INFO', 'Inserting transcript {0} for gene {1}'.format(insert_dict['refseq'], insert_dict['gene_symbol']))
+                            # check MANE to possibly update the canonical field - or increased NM version 
+                            if transcript['annotations']['mane_select'] is True or \
+                                    (re.split(r'\.', gene['refseq'])[0] == re.split(r'\.', transcript['reference'])[0] and
+                                    re.split(r'\.', gene['refseq'])[1] < re.split(r'\.', transcript['reference'])[1]):
                                     # reset MD canonical for this gene and set it for this transcript
                                     # log('INFO', 'Updating canonical for gene {0} from {1} to {2}'.format(gene['name'][0], gene['name'][1], transcript['reference']))
                                     curs.execute(
@@ -429,7 +412,7 @@ def main():
                                     db.commit()
                 else:
                     if re.search(r'NM_\d+\.\d{1,2}', transcript['reference']):
-                        log('WARNING', 'Transcript {0} from gene {1} has hg19/38 mapping issues'.format(transcript['reference'], gene['gene_symbol']))
+                        # log('WARNING', 'Transcript {0} from gene {1} has hg19/38 mapping issues'.format(transcript['reference'], gene['gene_symbol']))
                         default = 'hg19_mapping_default'
                         if ncbi_chr not in transcript['genomic_spans'] and \
                                 hg19_ncbi_chr not in transcript['genomic_spans']:

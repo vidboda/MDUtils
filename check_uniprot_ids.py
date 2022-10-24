@@ -35,7 +35,8 @@ def main():
         """
         SELECT gene_symbol, refseq, np, uniprot_id, prot_size
         FROM gene
-        ORDER BY name
+        WHERE uniprot_id IS NULL
+        ORDER BY gene_symbol
         """
     )
     res = curs.fetchall()
@@ -144,7 +145,7 @@ def main():
                         """
                         UPDATE gene
                         SET prot_size = '{0}'
-                        WHERE name[2] = '{1}'
+                        WHERE refseq = '{1}'
                         """.format(prot_size, gene['refseq'])
                     )
                     log('WARNING', 'Updated protein size for gene {0} - {1} - {2} to {3}'.format(
