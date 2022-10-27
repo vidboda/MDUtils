@@ -1,0 +1,9 @@
+psycopg2
+urllib3
+certifi
+json
+tabix
+yaml
+twobitreader
+flask
+
