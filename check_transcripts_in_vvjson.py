@@ -49,12 +49,12 @@ def check_vv_file(gene, db, curs, ncbi_chr, ncbi_chr_hg19):
     if os.path.isfile(
         '{0}{1}.json'.format(
             md_utilities.local_files['variant_validator']['abs_path'],
-            gene['name'][0]
+            gene['gene_symbol']
         )
     ):
         vv_file = open('{0}{1}.json'.format(
             md_utilities.local_files['variant_validator']['abs_path'],
-            gene['name'][0]
+            gene['gene_symbol']
         ), 'rb')
         vv_json = json.load(vv_file)
         transcript_found = False
@@ -75,7 +75,7 @@ def check_vv_file(gene, db, curs, ncbi_chr, ncbi_chr_hg19):
         except KeyError:
             log('WARNING', 'No transcript in file {0}{1}'.format(
                 md_utilities.local_files['variant_validator']['abs_path'],
-                gene['name'][0]
+                gene['gene_symbol']
             ))
     return ncbi_chr, ncbi_chr_hg19
 
@@ -111,7 +111,7 @@ def check_vv_transcript(transcript_found, gene, vv_json, ncbi_chr, ncbi_chr_hg19
                         """
                         UPDATE gene
                         SET variant_creation = 'ok'
-                        WHERE  refseq = %s
+                        WHERE refseq = %s
                         """,
                         (gene['refseq'],)
                     )
@@ -165,14 +165,14 @@ def main():
         """
         SELECT gene_symbol, refseq, variant_creation
         FROM gene
-        ORDER BY name[1]
+        ORDER BY gene_symbol
         """
     )
     genes = curs.fetchall()
     for gene in genes:
         # get VV json file
         if gene['gene_symbol'] == '':
-            log('ERROR', 'A gene has no name!!!')
+            log('ERROR', 'A gene has no symbol!!!')
         if os.path.isfile(
             '{0}{1}.json'.format(
                 md_utilities.local_files['variant_validator']['abs_path'],
@@ -203,7 +203,7 @@ def main():
         else:
             log('WARNING', 'File not found {0}{1}.json'.format(
                 md_utilities.local_files['variant_validator']['abs_path'],
-                gene['name'][0]
+                gene['gene_symbol']
             ))
             download_vv_file(gene['gene_symbol'], gene['refseq'])
             ncbi_chr, ncbi_chr_hg19 = check_vv_file(gene, db, curs, ncbi_chr, ncbi_chr_hg19)
