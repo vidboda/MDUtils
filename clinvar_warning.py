@@ -111,6 +111,7 @@ def main():
         WHERE a.feature_id = b.id
             AND b.id = c.feature_id
             AND a.mobiuser_id = d.id
+            AND d.clinvar_check = 't'
             AND a.type IN (2,3)
             AND c.genome_version = 'hg38'
         """
