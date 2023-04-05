@@ -57,7 +57,7 @@ def trigger_alert(app, var, clinsig_last, clinsig2nd_last, clinvar_last_version,
                     ),
                     False
                 ),
-                '[MobiDetails - Clinvar follow up]',
+                '[MobiDetails - Clinvar watch]',
                 [var['email']]
         )
 
