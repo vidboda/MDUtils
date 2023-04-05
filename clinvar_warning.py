@@ -42,7 +42,7 @@ def trigger_alert(app, var, clinsig_last, clinsig2nd_last, clinvar_last_version,
                         <li>{1}({2}):c.{3} - p.{4}: in Clinvar release {5}: {6}, becomes</li>
                         <li>{1}({2}):c.{3} - p.{4}: in Clinvar release {7}: {8}</li>
                     </ul>
-                    <p>Check out this variant in <a href='https://mobidetails.iurc.montp.inserm.fr/MD/api/variant/{9}/browser/' target='_blank'>MobiDetails</a> or <a href='https://mobidetails.iurc.montp.inserm.fr/MD/auth/login' target='_blank'>connect</a> to modify you Clinvar follow-up settings or modify your list of followed variants.</p>
+                    <p>Check out this variant in <a href='https://mobidetails.iurc.montp.inserm.fr/MD/api/variant/{9}/browser/' target='_blank'>MobiDetails</a> or <a href='https://mobidetails.iurc.montp.inserm.fr/MD/auth/login' target='_blank'>connect</a> to modify your Clinvar watch settings or modify your list of followed variants.</p>
                     """.format(
                         var['username'],
                         var['refseq'],
@@ -116,14 +116,6 @@ def main():
             AND c.genome_version = 'hg38'
         """
     )
-    # SELECT a.mobiuser_id, a.feature_id, b.id as vf_id,
-    #          b.refseq, b.c_name, b.p_name, b.gene_symbol, c.*, d.*
-    #     FROM mobiuser_favourite a, variant_feature b, variant c, mobiuser d
-    #     WHERE a.feature_id = b.id
-    #         AND b.id = c.feature_id
-    #         AND a.mobiuser_id = d.id
-    #         AND a.type IN (2,3)
-    #         AND c.genome_version = 'hg38'
     vars = curs.fetchall()
     log('DEBUG', '# of variants to be considered: {0}'.format(len(vars)))
     app = create_app()
@@ -137,18 +129,11 @@ def main():
         if i % 1000 == 0:
             log('INFO', '{0}/{1} variants checked'.format(i, num_vars))
         # check clinvar files
-        # get clinsig from both files
-        # clinvar_last = md_utilities.get_value_from_tabix_file(
-        #     'Clinvar', clinvar_last_file, var, var
-        # )
         clinvar_last = get_value_from_tabix_file(tb_last, var)
         if not clinvar_last:
             # no match, next
             continue
         clinsig_last = search_clinsig(clinvar_last)
-        # clinvar2nd_last = md_utilities.get_value_from_tabix_file(
-        #     'Clinvar', clinvar2nd_last_file, var, var
-        # )
         clinvar2nd_last = get_value_from_tabix_file(tb_2nd_last, var)
         clinsig2nd_last = search_clinsig(clinvar2nd_last) if clinvar2nd_last else None
         # log('DEBUG', '{0}-{1}-{2}-{3}: last clinsig: {4} - 2nd last clinsig: {5}'.format(
