@@ -1,10 +1,11 @@
-import os
+# import os
+import sys
 import re
-import time
-import json
-import urllib3
+# import time
+# import json
+# import urllib3
 import tabix
-import certifi
+# import certifi
 import psycopg2
 import psycopg2.extras
 from precompute_spipv2 import get_db, log
@@ -78,11 +79,24 @@ def get_value_from_tabix_file(tb, var):
 
 
 def main():
+    # get last watch versions
+    last_watched_file = open("clinvar_watch_last.txt", "r")
+    last_watched_version = last_watched_file.read()
+    last_watched_file.close()
+    log('DEBUG', 'Clinvar last watch: {0}'.format(last_watched_version))
     # get current clinvar file and version
     clinvar_last_file = md_utilities.local_files['clinvar_hg38']['abs_path']
     clinvar_last_version = md_utilities.clinvar_version
     log('DEBUG', 'Clinvar last file: {0}'.format(clinvar_last_file))
     log('DEBUG', 'Clinvar last version: {0}'.format(clinvar_last_version))
+    # if no clinvar update, just leave, else print new date in watchfile
+    if clinvar_last_version == last_watched_version:
+        log('INFO', 'No clinvar update since last watch. Exiting.')
+        sys.exit(0)
+    else:
+        last_watched_file = open("clinvar_watch_last.txt", "w")
+        last_watched_file.write(clinvar_last_version)
+        last_watched_file.close()
     # get second last clinvar file and version
     clinvar2nd_last_version = md_utilities.get_resource_current_version(
         '{0}{1}'.format(md_utilities.app_path, md_utilities.local_files['clinvar_hg38']['rel_path']),
