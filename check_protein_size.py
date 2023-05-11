@@ -51,19 +51,19 @@ def main():
             prot_size = -1
             try:
                 eutils_response = http.request('GET', ncbi_url).data.decode('utf-8')
-                # log('DEBUG', eutils_response)
-                prot_match = re.search(r'Protein\s+1\.\.(\d+)', eutils_response)  # Protein\s+1\.\.(\d+)$
-                if prot_match:
+                if prot_match := re.search(
+                    r'Protein\s+1\.\.(\d+)', eutils_response
+                ):
                     # log('DEBUG', 'ouhou')
-                    prot_size = int(prot_match.group(1))
-                    # log('DEBUG', prot_size)
+                    prot_size = int(prot_match[1])
             except Exception:
                 log('WARNING', 'no protein size w/ eutils NP acc no {0}, eutils URL:{1}'.format(gene['np'], ncbi_url))
             # log('DEBUG', prot_size)
-            if int(prot_size) != -1 and \
-                    ((gene['prot_size'] is not None and
-                        int(prot_size) != int(gene['prot_size'])) or
-                        gene['prot_size'] is None):
+            if prot_size != -1 and (
+                gene['prot_size'] is not None
+                and prot_size != int(gene['prot_size'])
+                or gene['prot_size'] is None
+            ):
                 curs.execute(
                     """
                     UPDATE gene
@@ -76,7 +76,7 @@ def main():
                     gene['uniprot_id'],
                     prot_size
                 ))
-    log('INFO', '{} isoforms updated'.format(i))
+    log('INFO', f'{i} isoforms updated')
 
     db.commit()
     db.close()

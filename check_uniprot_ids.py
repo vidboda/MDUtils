@@ -49,21 +49,20 @@ def main():
         if i % 500 == 0:
             log('INFO', '{0}/{1} transcripts checked'.format(i, count))
         if gene['np']:
-            match_obj = re.search(r'(NP_\d+)\.\d', gene['np'])
-            if match_obj:
+            if match_obj := re.search(r'(NP_\d+)\.\d', gene['np']):
                 # log('DEBUG', gene['name'][0])
-                np = match_obj.group(1)
-                uniprot_url = 'https://www.ebi.ac.uk/proteins/api/proteins/refseq:{}?offset=0&size=100&reviewed=true'.format(np)
+                np = match_obj[1]
+                uniprot_url = f'https://www.ebi.ac.uk/proteins/api/proteins/refseq:{np}?offset=0&size=100&reviewed=true'
                 uniprot_response = json.loads(http.request('GET', uniprot_url, headers=md_utilities.api_agent).data.decode('utf-8'))
                 # print(uniprot_response[0]['accession'])
                 try:
                     if uniprot_response[0]['accession']:
                         # get uniport id prot size
                         # print('{0}-{1}'.format(gene['uniprot_id'], uniprot_response[0]['sequence']['length']))
-                        if gene['uniprot_id'] == uniprot_response[0]['accession']:
-                            # print('INFO: RefSeq: {0} - {1} - {2} OK'.format(gene['np'], gene['name'][1], gene['name'][0]))
-                            pass
-                        else:
+                        if (
+                            gene['uniprot_id']
+                            != uniprot_response[0]['accession']
+                        ):
                             # known id?
                             curs.execute(
                                 """
@@ -122,21 +121,19 @@ def main():
                     """,
                     (gene['np'],)
                 )
-                res_size = curs.fetchone()
-                if res_size:
+                if res_size := curs.fetchone():
                     prot_size = res_size['prot_size']
                 if prot_size == -1:
                     try:
                         eutils_response = http.request('GET', ncbi_url).data.decode('utf-8')
-                        # log('DEBUG', eutils_response)
-                        prot_match = re.search(r'Protein\s+1\.\.(\d+)', eutils_response)  # Protein\s+1\.\.(\d+)$
-                        if prot_match:
+                        if prot_match := re.search(
+                            r'Protein\s+1\.\.(\d+)', eutils_response
+                        ):
                             # log('DEBUG', 'ouhou')
-                            prot_size = int(prot_match.group(1))
-                            # log('DEBUG', prot_size)
+                            prot_size = int(prot_match[1])
                     except Exception:
                         log('WARNING', 'no protein size w/ eutils NP acc no {0}, eutils URL:{1}'.format(gene['np'], ncbi_url))
-                    # log('DEBUG', prot_size)
+                                    # log('DEBUG', prot_size)
                 if int(prot_size) != -1 and \
                         ((gene['prot_size'] is not None and
                             int(prot_size) != int(gene['prot_size'])) or
@@ -155,10 +152,10 @@ def main():
                         prot_size
                     ))
             else:
-                log('WARNING', 'pb w/ NP acc no {}'.format(gene['np']))
+                log('WARNING', f"pb w/ NP acc no {gene['np']}")
         else:
-            log('WARNING', 'No NP for {}'.format(gene['refseq']))
-    log('INFO', '{} isoforms updated'.format(i))
+            log('WARNING', f"No NP for {gene['refseq']}")
+    log('INFO', f'{i} isoforms updated')
 
     db.commit()
     db_pool.putconn(db)

@@ -25,9 +25,7 @@ def main():
         if i % 500 == 0:
             log('INFO', '{0}/{1} lines checked'.format(i, 42946))
         gene_info = re.split('\t', line)
-        match_id = re.search(r'^HGNC:(\d+)', gene_info[0])
-        if match_id:
-            hgnc_id = match_id.group(1)
+        if match_id := re.search(r'^HGNC:(\d+)', gene_info[0]):
             # log('DEBUG', 'Status:{0}'.format(gene_info[4]))
             if gene_info[3] == 'protein-coding gene' and \
                     gene_info[5] == 'Approved':
@@ -39,6 +37,7 @@ def main():
                 hgnc_current_symbol = gene_info[1]
                 db_pool, db = get_db()
                 curs = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
+                hgnc_id = match_id[1]
                 curs.execute(  # get genes - one transcript per gene (canonical) - allows update of all trasncripts
                     """
                     SELECT gene_symbol, hgnc_name, second_name
@@ -47,8 +46,7 @@ def main():
                     """,
                     (hgnc_id,)
                 )
-                md_gene = curs.fetchone()
-                if md_gene:
+                if md_gene := curs.fetchone():
                     # check symbol and name
                     if md_gene['gene_symbol'] != hgnc_current_symbol:
                         # log('DEBUG', 'Symbol differs for HGNC {0}, MD {1}'.format(hgnc_current_symbol, md_gene['name'][0]))
@@ -63,22 +61,21 @@ def main():
                                 ('message' in vv_json and
                                     vv_json['message'] == 'Internal Server Error'):
                             continue
-                        else:
-                            # log('DEBUG', 'Symbol change for HGNC {0}, MD {1}'.format(hgnc_current_symbol, md_gene['name'][0]))
-                            curs.execute(
-                                """
+                        # log('DEBUG', 'Symbol change for HGNC {0}, MD {1}'.format(hgnc_current_symbol, md_gene['name'][0]))
+                        curs.execute(
+                            """
                                 UPDATE gene
                                 SET gene_symbol = %s, second_name = %s || ',' || %s
                                 WHERE hgnc_id = %s
                                 """,
-                                (
-                                    hgnc_current_symbol,
-                                    md_gene['gene_symbol'],
-                                    md_gene['second_name'],
-                                    hgnc_id
-                                )
+                            (
+                                hgnc_current_symbol,
+                                md_gene['gene_symbol'],
+                                md_gene['second_name'],
+                                hgnc_id
                             )
-                            db.commit()
+                        )
+                        db.commit()
                     if md_gene['hgnc_name'] != gene_info[2]:
                         # log('DEBUG', 'Name differs for HGNC:{0}, MD {1}'.format(gene_info[2], md_gene['name'][0]))
                         curs.execute(
@@ -101,9 +98,12 @@ def main():
                         hgnc_current_symbol
                     ), 'rb')
                     vv_json = json.load(vv_file)
-                    insert_dict = {}
-                    insert_dict['hgnc_id'] = hgnc_id
-                    insert_dict['second_name'] = '{0};{1}'.format(gene_info[10], gene_info[8]).replace('"', '')
+                    insert_dict = {
+                        'hgnc_id': hgnc_id,
+                        'second_name': '{0};{1}'.format(
+                            gene_info[10], gene_info[8]
+                        ).replace('"', ''),
+                    }
                     insert_dict['hgnc_name'] = gene_info[2]
                     insert_dict['uniprot_id'] = gene_info[25]
                     if insert_dict['uniprot_id'] == '':
@@ -145,9 +145,10 @@ def main():
                                         insert_dict['number_of_exons'] = vv_transcript['genomic_spans'][ncbi_chr[insert_dict['chr']]]['total_exons']
                                         insert_dict['ng'] = 'NG_000000.0'
                                         for acc in vv_transcript:
-                                            ng_match = re.search(r'^(NG_\d+\.\d{1,2})$', acc)
-                                            if ng_match:
-                                                insert_dict['ng'] = ng_match.group(1)
+                                            if ng_match := re.search(
+                                                r'^(NG_\d+\.\d{1,2})$', acc
+                                            ):
+                                                insert_dict['ng'] = ng_match[1]
                                         insert_dict['np'] = vv_transcript['translation']
                                         with open('gene2ensembl_hs', 'r') as f:
                                             for line in f:
@@ -164,11 +165,10 @@ def main():
                                         insert_dict['canonical'] = 'f'
                                         if vv_transcript['annotations']['mane_select'] is True:
                                             insert_dict['canonical'] = 't'
-                                        # afterwards need to look for genes with no canonical
-                                        s = ", "
                                         t = "', '"
                                         insert_dict['gene_symbol'] = hgnc_current_symbol
                                         insert_dict['refseq'] = vv_transcript['reference']
+                                        s = ", "
                                         log('INFO', "INSERT INTO gene (gene_symbol, refseq, {0}) VALUES ('{1}')".format(
                                                 s.join(insert_dict.keys()),
                                                 t.join(map(str, insert_dict.values()))
@@ -195,9 +195,8 @@ def main():
                                             ).replace("'NULL'", "NULL")
                                         )
                                         db.commit()
-                                    else:
-                                        if re.search(r'NM_\d+\.\d{1,2}', vv_transcript['reference']):
-                                            log('WARNING', 'hg19 or hg38 mapping issue for {0}-{1}'.format(vv_transcript['reference'], hgnc_current_symbol))
+                                    elif re.search(r'NM_\d+\.\d{1,2}', vv_transcript['reference']):
+                                        log('WARNING', 'hg19 or hg38 mapping issue for {0}-{1}'.format(vv_transcript['reference'], hgnc_current_symbol))
                         else:
                             log('WARNING', 'No transcript in {0}.json file'.format(hgnc_current_symbol))
                             continue

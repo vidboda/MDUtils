@@ -53,18 +53,28 @@ def main():
             # ncbi
             ncbi_url = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&id={0}&api_key={1}'.format(acc['refseq'], ncbi_api_key)
             eutils_response = http.request('GET', ncbi_url).data.decode('utf-8')
-            match_object = re.search(r'accession\s"(NP_\d+)",\s+version\s(\d+)$', eutils_response, re.MULTILINE)
-            if match_object:
+            if match_object := re.search(
+                r'accession\s"(NP_\d+)",\s+version\s(\d+)$',
+                eutils_response,
+                re.MULTILINE,
+            ):
                 curs.execute(
                     """
                     UPDATE gene
                     SET np = '{0}.{1}'
                     WHERE refseq = '{2}'
-                    """.format(match_object.group(1), match_object.group(2), acc['refseq'])
+                    """.format(
+                        match_object[1], match_object[2], acc['refseq']
+                    )
                 )
-                log('INFO', 'Updated gene NP acc no of {0} to {1}.{2}'.format(acc['gene_symbol'], match_object.group(1), match_object.group(2)))
+                log(
+                    'INFO',
+                    'Updated gene NP acc no of {0} to {1}.{2}'.format(
+                        acc['gene_symbol'], match_object[1], match_object[2]
+                    ),
+                )
                 i += 1
-    log('INFO', '{} genes updated'.format(i))
+    log('INFO', f'{i} genes updated')
 
     db.commit()
     db.close()

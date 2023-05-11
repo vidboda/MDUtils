@@ -23,7 +23,6 @@ def main():
     db = get_db()
     curs = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
-    i = 0
     curs.execute(
         "select name[1] as name from gene where canonical = 't' group by name[1] having count(name[1]) > 1;"
     )
@@ -31,9 +30,10 @@ def main():
     if res is not None:
         # get canonical from NCBI
         http = urllib3.PoolManager(cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())
+        i = 0
         for hgnc_name in res:
             # print(hgnc_name)
-            log('INFO', "Examining {}".format(hgnc_name['name']))
+            log('INFO', f"Examining {hgnc_name['name']}")
             curs.execute(
                "select * from gene where name[1] = %s",
                (hgnc_name['name'],)
@@ -53,15 +53,21 @@ def main():
                         "UPDATE gene SET canonical = 'f' WHERE name[1] = %s",
                         (acc['name'][0],)
                     )
-                    log('INFO', "UPDATE gene SET canonical = 'f' WHERE name[1] = '{}'".format(acc['name'][0]))
+                    log(
+                        'INFO',
+                        f"UPDATE gene SET canonical = 'f' WHERE name[1] = '{acc['name'][0]}'",
+                    )
                     curs.execute(
                         "UPDATE gene SET canonical = 't' WHERE name[2] = %s",
                         (acc['name'][1],)
                     )
-                    log('INFO', "UPDATE gene SET canonical = 't' WHERE name[2] = '{}'".format(acc['name'][1]))
+                    log(
+                        'INFO',
+                        f"UPDATE gene SET canonical = 't' WHERE name[2] = '{acc['name'][1]}'",
+                    )
                     i += 1
-                    log('INFO', 'Updated gene {}'.format(acc['name'][0]))
-        log('INFO', 'Updated {} genes'.format(i))
+                    log('INFO', f"Updated gene {acc['name'][0]}")
+        log('INFO', f'Updated {i} genes')
     else:
         log('INFO', 'No genes to update. Everything is ok.')
     db.commit()

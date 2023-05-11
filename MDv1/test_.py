@@ -12,7 +12,7 @@ def test_db_conn():
         test_value = True
     except Exception:
         test_value = False
-    assert test_value is True
+    assert test_value
 
 
 def test_file_list():

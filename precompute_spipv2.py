@@ -74,16 +74,18 @@ def main():
             result = subprocess.run(
                 [
                     md_utilities.ext_exe['Rscript'],
-                    '{}'.format(md_utilities.ext_exe['spip']),
+                    f"{md_utilities.ext_exe['spip']}",
                     '-I',
-                    '{}'.format(tf.name),
+                    f'{tf.name}',
                     '-O',
-                    '{0}{1}.txt'.format(md_utilities.local_files['spip']['abs_path'], var['id']),
+                    '{0}{1}.txt'.format(
+                        md_utilities.local_files['spip']['abs_path'], var['id']
+                    ),
                     '-g',
-                    'hg38'
+                    'hg38',
                 ],
                 stdout=subprocess.DEVNULL,
-                stderr=subprocess.STDOUT
+                stderr=subprocess.STDOUT,
             )
             # log('DEBUG', result.returncode)
             if result.returncode == 0:

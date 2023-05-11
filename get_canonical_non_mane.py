@@ -25,17 +25,16 @@ def main():
             gene['gene_symbol']
         ), 'rb')
         vv_json = json.load(vv_file)
-        update_required = False
         if 'error' in vv_json or \
                 ('message' in vv_json and
                 vv_json['message'] == 'Internal Server Error'):
             continue
-        for vv_transcript in vv_json['transcripts']:
-            if vv_transcript['reference'] == gene['refseq']:
-                if 'mane_select' in vv_transcript['annotations']:
-                    if vv_transcript['annotations']['mane_select'] is False:
-                        # the canonical is not the MANE
-                        update_required = True
+        update_required = any(
+            vv_transcript['reference'] == gene['refseq']
+            and 'mane_select' in vv_transcript['annotations']
+            and vv_transcript['annotations']['mane_select'] is False
+            for vv_transcript in vv_json['transcripts']
+        )
         if update_required:
             # loop again on all transcripts
             for vv_transcript in vv_json['transcripts']:
@@ -51,16 +50,19 @@ def main():
                         (vv_transcript['reference'],)
                     )
                     res_create = curs.fetchone()
-                    if res_create and \
-                            (res_create['variant_creation'] == 'ok' or
-                            res_create['variant_creation'] == 'hg19_mapping_default'):
-                        noupdate = False
-                        # if canonical = MANEPlusClinical, do not update
-                        for vv_transcript2 in vv_json['transcripts']:
-                            if 'mane_plus_clinical' in vv_transcript2['annotations'] and \
-                                    vv_transcript2['annotations']['mane_plus_clinical'] and \
-                                    vv_transcript2['reference'] == gene['refseq']:
-                                noupdate = True
+                    if res_create and res_create['variant_creation'] in [
+                        'ok',
+                        'hg19_mapping_default',
+                    ]:
+                        noupdate = any(
+                            'mane_plus_clinical'
+                            in vv_transcript2['annotations']
+                            and vv_transcript2['annotations'][
+                                'mane_plus_clinical'
+                            ]
+                            and vv_transcript2['reference'] == gene['refseq']
+                            for vv_transcript2 in vv_json['transcripts']
+                        )
                         if not noupdate:
                             log('INFO', 'NonMANECanonical:{0} - MANE: {1}'.format(gene['gene_symbol'], vv_transcript['reference']))
                             curs.execute(

@@ -115,16 +115,18 @@ def main():
 
             # TODO if file exists check md5 and if it's different, update the file - and all the associated variants?????
         # check gene name
-        if 'current_name' in vv_data and \
-                'current_symbol' in vv_data:
-            if vv_data['current_symbol'] == gene['name'][0] and \
-                    vv_data['current_name'] != gene['prot_name']:
-                curs.execute(
-                    "UPDATE gene SET prot_name = %s WHERE name[1] = %s",
-                    (vv_data['current_name'], gene['name'][0])
-                )
-                db.commit()
-                log('INFO', "NAME UPDATE: gene {0} modified from {1} to {2}".format(gene['name'][0], gene['prot_name'], vv_data['current_name']))
+        if (
+            'current_name' in vv_data
+            and 'current_symbol' in vv_data
+            and vv_data['current_symbol'] == gene['name'][0]
+            and vv_data['current_name'] != gene['prot_name']
+        ):
+            curs.execute(
+                "UPDATE gene SET prot_name = %s WHERE name[1] = %s",
+                (vv_data['current_name'], gene['name'][0])
+            )
+            db.commit()
+            log('INFO', "NAME UPDATE: gene {0} modified from {1} to {2}".format(gene['name'][0], gene['prot_name'], vv_data['current_name']))
 
         if 'transcripts' in vv_data:
             # current_nm = gene['nm_version']
@@ -149,12 +151,12 @@ def main():
                             )
                             log('INFO', "NP UPDATE: gene {0} modified from {1} to {2}".format(gene['name'][0], gene['np'], transcript['translation']))
                         db.commit()
-                # print("VV------{}".format(transcript['reference']))
-                match_object = re.search(r'^(N[MR]_\d+)\.(\d{1,2})', transcript['reference'])
-                if match_object:
-                    nm_acc = match_object.group(1)
+                if match_object := re.search(
+                    r'^(N[MR]_\d+)\.(\d{1,2})', transcript['reference']
+                ):
+                    nm_acc = match_object[1]
                     # if nm_acc == gene['name'][1]:
-                    nm_version = match_object.group(2)
+                    nm_version = match_object[2]
                     if nm_acc not in ts_dict:
                         ts_dict[nm_acc] = [nm_version]
                     else:
@@ -172,11 +174,10 @@ def main():
                 if not res_nm:
                     continue
                 # log("DEBUG", "Gene: {0} - NM: {1} - VV Max NM: {2} - MD Current NM: {3}".format(gene['name'][0], nm, max_vv_nm, res_nm[0]))
-                if res_nm and \
-                        int(res_nm[0]) != int(max_vv_nm):
+                if int(res_nm[0]) != int(max_vv_nm):
                     # NEED TO TEST IF THE TRANSCRIPT WORKS!!!!!
                     vv_url_var = "{0}/VariantValidator/variantvalidator/GRCh38/{1}.{2}:c.1A>T/all?content-type=application/json".format(vv_url_base, nm, max_vv_nm)
-                    log('DEBUG', 'Calling VariantValidator API: {}'.format(vv_url_var))
+                    log('DEBUG', f'Calling VariantValidator API: {vv_url_var}')
                     try:
                         vv_data = json.loads(http.request('GET', vv_url_var).data.decode('utf-8'))
                         # log('DEBUG', vv_data)

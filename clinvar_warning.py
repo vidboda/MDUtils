@@ -18,13 +18,15 @@ from MobiDetailsApp import md_utilities, create_app
 
 
 def search_clinsig(clinvar_list):
-    match_object = re.search(r'CLNSIG=([\w\/\|]+);CLNSIGCONF=', clinvar_list[7])
-    if match_object:
-         return match_object.group(1)
-    match_object = re.search(r'CLNSIG=([\w\/\|]+);CLNVC=', clinvar_list[7])
-    if match_object:
+    if match_object := re.search(
+        r'CLNSIG=([\w\/\|]+);CLNSIGCONF=', clinvar_list[7]
+    ):
+        return match_object[1]
+    if match_object := re.search(
+        r'CLNSIG=([\w\/\|]+);CLNVC=', clinvar_list[7]
+    ):
         # log('DEBUG', clinvar_last[7])
-        return match_object.group(1)
+        return match_object[1]
     else:
         log('WARNING', 'Bad format for clinvar_list field: {0}'.format(clinvar_list))
 
@@ -79,10 +81,8 @@ def get_value_from_tabix_file(tb, var):
 
 
 def main():
-    # get last watch versions
-    last_watched_file = open("clinvar_watch_last.txt", "r")
-    last_watched_version = last_watched_file.read()
-    last_watched_file.close()
+    with open("clinvar_watch_last.txt", "r") as last_watched_file:
+        last_watched_version = last_watched_file.read()
     log('DEBUG', 'Clinvar last watch: {0}'.format(last_watched_version))
     # get current clinvar file and version
     clinvar_last_file = md_utilities.local_files['clinvar_hg38']['abs_path']
@@ -94,9 +94,8 @@ def main():
         log('INFO', 'No clinvar update since last watch. Exiting.')
         sys.exit(0)
     else:
-        last_watched_file = open("clinvar_watch_last.txt", "w")
-        last_watched_file.write(clinvar_last_version)
-        last_watched_file.close()
+        with open("clinvar_watch_last.txt", "w") as last_watched_file:
+            last_watched_file.write(clinvar_last_version)
     # get second last clinvar file and version
     clinvar2nd_last_version = md_utilities.get_resource_current_version(
         '{0}{1}'.format(md_utilities.app_path, md_utilities.local_files['clinvar_hg38']['rel_path']),
@@ -175,8 +174,7 @@ def main():
             trigger_alert(app, var, clinsig_last, clinsig2nd_last, clinvar_last_version, clinvar2nd_last_version, 'Uncertain_significance')
             # Conflicting_interpretations_of_pathogenicity becomes sthg
             trigger_alert(app, var, clinsig_last, clinsig2nd_last, clinvar_last_version, clinvar2nd_last_version, 'Conflicting_interpretations_of_pathogenicity')
-        elif clinsig_last and \
-                not clinsig2nd_last:
+        elif clinsig_last:
             clinsig2nd_last = 'Not recorded'
             # nothing becomes sthg
             trigger_alert(app, var, clinsig_last, clinsig2nd_last, clinvar_last_version, clinvar2nd_last_version, 'recorded')

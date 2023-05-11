@@ -27,7 +27,7 @@ def main():
     else:
         api_key = args.api_key
     print()
-    log('INFO', 'Working with server {}'.format(remote_addr))
+    log('INFO', f'Working with server {remote_addr}')
 
     # get db connector and cursor
     # db = get_db()
@@ -95,7 +95,7 @@ def main():
         try:
             md_response = json.loads(http.request('POST', md_url, headers=md_utilities.api_agent, fields=data).data.decode('utf-8'))
         except Exception:
-            log('WARNING', 'failed MD API call for {}'.format(variant_chgvs))
+            log('WARNING', f'failed MD API call for {variant_chgvs}')
             # put back transcript state as it was
             curs.execute(
                 """
@@ -107,7 +107,7 @@ def main():
             )
             db.commit()
             k += 1
-            failed_genes.append('{}'.format(transcript['refseq']))
+            failed_genes.append(f"{transcript['refseq']}")
             continue
         if 'mobidetails_error' in md_response:
             j += 1
