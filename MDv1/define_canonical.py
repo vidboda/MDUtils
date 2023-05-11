@@ -63,16 +63,16 @@ def main():
             (acc['name'][1],)
         )
         # lacking_nm.append(acc['name'][0])
-        log('INFO', 'Updated gene {} (1st method)'.format(acc['name'][0]))
+        log('INFO', f"Updated gene {acc['name'][0]} (1st method)")
         i += 1
     db.commit()
     # second check the refgene file
     log('INFO', "2nd Query: get info from local refGene file")
-    for geneLine in open(refgeneFile).readlines():
+    for geneLine in open(refgeneFile):
         # ENST - NM - gene
         geneLineList = geneLine.rstrip().split("\t")
         # print(geneLineList[2])
-        if geneLineList[2] != 'n/a' and geneLineList[2] != 'hg38.refGene.name2':
+        if geneLineList[2] not in ['n/a', 'hg38.refGene.name2']:
             # "SELECT DISTINCT(name[1]) FROM gene WHERE name[1] = %s AND name[1] NOT IN (SELECT name[1] FROM gene WHERE canonical = 't') ORDER BY name", - removed -too long
             curs.execute(  # gene exists in MD (no main already set)
                 "SELECT DISTINCT(name[1]) FROM gene WHERE name[1] = %s ORDER BY name",
@@ -103,9 +103,9 @@ def main():
                              "UPDATE gene SET canonical = 't' WHERE name = %s",
                              (postGene,)
                         )
-                        log('INFO', 'Updated gene {} (2nd method)'.format(mdnm['name'][0]))
-                # else:
-                    # lacking_nm.append(geneLineList[2])
+                        log('INFO', f"Updated gene {mdnm['name'][0]} (2nd method)")
+                            # else:
+                                # lacking_nm.append(geneLineList[2])
     # print(lacking_nm)
     db.commit()
     log('INFO', "3rd Query: get info from NCBI for genes with no canonical defined remaining")
@@ -145,14 +145,24 @@ def main():
                         (acc['name'][1],)
                     )
                     i += 1
-                    log('INFO', 'Updated gene {} (3rd method)'.format(acc['name'][0]))
-                if acc['np'] == 'NP_000000.0':
-                    if re.search(r'accession\s"NP_\d+",\s+version\s\d$', eutils_response, re.MULTILINE):
-                        match_object = re.search(r'accession\s"(NP_\d+)",\s+version\s(\d+)$', eutils_response, re.MULTILINE)
-                        curs.execute(
-                            "UPDATE gene SET np = '{0}.{1}' WHERE name[2] = '{2}'".format(match_object.group(1), match_object.group(2), acc['name'][1])
+                    log('INFO', f"Updated gene {acc['name'][0]} (3rd method)")
+                if acc['np'] == 'NP_000000.0' and re.search(
+                    r'accession\s"NP_\d+",\s+version\s\d$',
+                    eutils_response,
+                    re.MULTILINE,
+                ):
+                    match_object = re.search(r'accession\s"(NP_\d+)",\s+version\s(\d+)$', eutils_response, re.MULTILINE)
+                    curs.execute(
+                        "UPDATE gene SET np = '{0}.{1}' WHERE name[2] = '{2}'".format(
+                            match_object[1], match_object[2], acc['name'][1]
                         )
-                        log('INFO', 'Updated gene NP acc no of {0} to {1}.{2}'.format(acc['name'][0], match_object.group(1), match_object.group(2)))
+                    )
+                    log(
+                        'INFO',
+                        'Updated gene NP acc no of {0} to {1}.{2}'.format(
+                            acc['name'][0], match_object[1], match_object[2]
+                        ),
+                    )
 
         if args.update_refgene:
             log('INFO', "Update refGene")
@@ -171,11 +181,6 @@ def main():
                 )
                 # log('DEBUG', ncbi_url)
                 eutils_response = http.request('GET', ncbi_url).data.decode('utf-8')
-                # if acc['name'][1] == 'NM_018257':
-                    # log('DEBUG', eutils_response)
-                    # log('DEBUG', acc['canonical'])
-                    # log('DEBUG', re.search(r'"RefSeq\sSelect\scriteria"', eutils_response))
-
                 # now we also have the "MANE Select" from the MANE project - should be updated
                 if re.search(r'"RefSeq\sSelect\scriteria"', eutils_response) and acc['canonical'] is False:
                     curs.execute(
@@ -189,8 +194,8 @@ def main():
                     )
                     # log('INFO', "UPDATE gene SET canonical = 't' WHERE name[2] = '{}'".format(acc['name'][1]))
                     i += 1
-                    log('INFO', 'Updated gene {} (4th method)'.format(acc['name'][0]))
-    log('INFO', '{} genes modified'.format(i))
+                    log('INFO', f"Updated gene {acc['name'][0]} (4th method)")
+    log('INFO', f'{i} genes modified')
 
     db.commit()
 

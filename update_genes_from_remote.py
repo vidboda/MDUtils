@@ -56,12 +56,12 @@ def main():
     #     ncbi_api_key = args.ncbi_api_key
     # args = parser.parse_args(['-np'])
     print()
-    log('INFO', 'Working with server {}'.format(remote_addr))
+    log('INFO', f'Working with server {remote_addr}')
 
     # headers
     header = {
         'Accept': 'application/json',
-        'User-Agent': 'python-requests Python/{}.{}.{}'.format(sys.version_info[0], sys.version_info[1], sys.version_info[2]),
+        'User-Agent': f'python-requests Python/{sys.version_info[0]}.{sys.version_info[1]}.{sys.version_info[2]}',
     }
 
     # get genes symbols from vv_json dir
@@ -86,10 +86,8 @@ def main():
     # for gene in genes:
     for gene_file in gene_list:
         if gene_file.endswith('.json'):
-            match_gene_symbol = re.search(r'^(\w+).json$', gene_file)
-            # log('DEBUG', match_gene_symbol.group(1))
-            if match_gene_symbol:
-                gene_symbol = match_gene_symbol.group(1)
+            if match_gene_symbol := re.search(r'^(\w+).json$', gene_file):
+                gene_symbol = match_gene_symbol[1]
                 i += 1
                 if i % 500 == 0:
                     log('INFO', '{0}/{1} genes checked'.format(i, count))
@@ -135,12 +133,13 @@ def main():
                                     update_sql_gene.append(' strand = \'{0}\' '.format(api_response[key]))
                         # transcripts
                         ncbi_transcript_regexp = md_utilities.regexp['ncbi_transcript']
-                        nm_obj = re.search(rf'^({ncbi_transcript_regexp})$', key)
-                        if nm_obj:
+                        if nm_obj := re.search(
+                            rf'^({ncbi_transcript_regexp})$', key
+                        ):
                             # check if already exists
                             # if yes => update if different => check each attribute? if one is differet, update all?
                             # if no create transcript
-                            currrent_nm = nm_obj.group(1)
+                            currrent_nm = nm_obj[1]
                             # log('DEBUG', nm_obj.group(1))
                             curs.execute(
                                 "SELECT * FROM gene WHERE refseq = %s",
@@ -152,28 +151,28 @@ def main():
                             if prod_nm:
                                 for key2 in api_response[key]:
                                     # check if need to update
-                                    if key2 == 'refProtein':
-                                        if api_response[key][key2] != prod_nm['np']:
-                                            update_sql_transcript.append(' np = \'{0}\' '.format(api_response[key][key2]))
                                     if key2 == 'UNIPROT':
                                         if api_response[key][key2] != prod_nm['uniprot_id']:
                                             update_sql_transcript.append(' uniprot_id = \'{0}\' '.format(api_response[key][key2]))
-                                    if key2 == 'proteinSize':
-                                        if api_response[key][key2] != prod_nm['prot_size']:
-                                            update_sql_transcript.append(' prot_size = {0} '.format(api_response[key][key2]))
-                                    if key2 == 'canonical':
+                                    elif key2 == 'canonical':
                                         if api_response[currrent_nm]['canonical'] != prod_nm['canonical']:
                                             update_sql_transcript.append(' canonical = \'{0}\' '.format(api_canonical))
-                                    if key2 == 'ensemblProtein':
+                                    elif key2 == 'ensemblProtein':
                                         if api_response[key][key2] != prod_nm['ensp']:
                                             update_sql_transcript.append(' ensp = \'{0}\' '.format(api_response[key][key2]))
-                                    if key2 == 'ensemblTranscript':
+                                    elif key2 == 'ensemblTranscript':
                                         if api_response[key][key2] != prod_nm['enst']:
                                             update_sql_transcript.append(' enst = \'{0}\' '.format(api_response[key][key2]))
-                                    if key2 == 'numberOfExons':
+                                    elif key2 == 'numberOfExons':
                                         if api_response[key][key2] != prod_nm['number_of_exons']:
                                             update_sql_transcript.append(' number_of_exons = {0} '.format(api_response[key][key2]))
-                                    if key2 == 'variantCreationTag':
+                                    elif key2 == 'proteinSize':
+                                        if api_response[key][key2] != prod_nm['prot_size']:
+                                            update_sql_transcript.append(' prot_size = {0} '.format(api_response[key][key2]))
+                                    elif key2 == 'refProtein':
+                                        if api_response[key][key2] != prod_nm['np']:
+                                            update_sql_transcript.append(' np = \'{0}\' '.format(api_response[key][key2]))
+                                    elif key2 == 'variantCreationTag':
                                         if api_response[key][key2] != prod_nm['variant_creation']:
                                             update_sql_transcript.append(' variant_creation = \'{0}\' '.format(api_response[key][key2]))
                                 # update ?

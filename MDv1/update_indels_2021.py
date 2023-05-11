@@ -34,18 +34,19 @@ def main():
         "SELECT c.pos, a.id, a.c_name, a.dna_type, a.variant_size, a.wt_seq, a.mt_seq, b.chr, b.strand FROM variant_feature a, gene b, variant c WHERE a.id = c.feature_id AND a.gene_name = b.name AND a.dna_type ='insertion' AND c.genome_version = 'hg38'"
     )
     res = curs.fetchall()
-    log('INFO', '{} variants to be checked:'.format(len(res)))
+    log('INFO', f'{len(res)} variants to be checked:')
     j = 0
     for var in res:
         pos_vcf = int(var['pos'])
-        if var['dna_type'] == 'indel' or \
-            var['dna_type'] == 'insertion':
+        if var['dna_type'] in ['indel', 'insertion']:
             pos_vcf -= 1
         x = pos_vcf - 25
         y = pos_vcf + int(var['variant_size']) + 25
 
-        genome = twobitreader.TwoBitFile('{}.2bit'.format(md_utilities.local_files['human_genome_hg38']['abs_path']))
-        current_chrom = genome['chr{}'.format(var['chr'])]
+        genome = twobitreader.TwoBitFile(
+            f"{md_utilities.local_files['human_genome_hg38']['abs_path']}.2bit"
+        )
+        current_chrom = genome[f"chr{var['chr']}"]
         seq_slice = current_chrom[x:y].upper()
         # seq2 = current_chrom[int(positions[0])+1:int(positions[0])+2]
         # return seq2
@@ -60,35 +61,27 @@ def main():
         new_mt_seq = None
         if var['dna_type'] == 'indel':
             ins_obj = re.search(r'delins([ATGC]+)', var['c_name'])
-            exp_size = abs(len(middle)-len(ins_obj.group(1)))
-            exp = ''
-            for i in range(0, exp_size):
-                exp += '-'
-            if len(middle) > len(ins_obj.group(1)):
+            exp_size = abs(len(middle) - len(ins_obj[1]))
+            exp = ''.join('-' for _ in range(0, exp_size))
+            if len(middle) > len(ins_obj[1]):
                 new_wt_seq = "{0} {1} {2}".format(begin, middle, end)
-                new_mt_seq = "{0} {1}{2} {3}".format(begin, ins_obj.group(1), exp, end)
+                new_mt_seq = "{0} {1}{2} {3}".format(begin, ins_obj[1], exp, end)
             else:
                 new_wt_seq = "{0} {1}{2} {3}".format(begin, middle, exp, end)
-                new_mt_seq = "{0} {1} {2}".format(begin, ins_obj.group(1), end)
+                new_mt_seq = "{0} {1} {2}".format(begin, ins_obj[1], end)
         elif var['dna_type'] == 'deletion':
             new_wt_seq = "{0} {1} {2}".format(begin, middle, end)
-            exp = ''
-            for i in range(0, var['variant_size']):
-                exp += '-'
+            exp = ''.join('-' for _ in range(0, var['variant_size']))
             new_mt_seq = "{0} {1} {2}".format(begin, exp, end)
         elif var['dna_type'] == 'duplication':
-            exp = ''
-            for i in range(0, var['variant_size']):
-                exp += '-'
+            exp = ''.join('-' for _ in range(0, var['variant_size']))
             new_wt_seq = "{0} {1}{2} {3}".format(begin, middle, exp, end)
             new_mt_seq = "{0} {1}{1} {2}".format(begin, middle, end)
         elif var['dna_type'] == 'insertion':
             ins_obj = re.search(r'ins([ATGC]+)', var['c_name'])
-            exp = ''
-            for i in range(0, len(ins_obj.group(1))):
-                exp += '-'
+            exp = ''.join('-' for _ in range(0, len(ins_obj[1])))
             new_wt_seq = "{0} {1} {2}".format(begin, exp, end)
-            new_mt_seq = "{0} {1} {2}".format(begin, ins_obj.group(1), end)
+            new_mt_seq = "{0} {1} {2}".format(begin, ins_obj[1], end)
         if new_wt_seq != var['wt_seq'] or \
                 new_mt_seq != var['wt_seq']:
             curs.execute(
@@ -96,10 +89,13 @@ def main():
                 (new_wt_seq, new_mt_seq, var['id'])
             )
             db.commit()
-            log('INFO', "UPDATE variant_feature SET wt_seq = '{}', mt_seq = '{}' WHERE id = '{}'".format(new_wt_seq, new_mt_seq, var['id']))
-            log('INFO', 'variant:{}, WT:{}, MT:{}'.format(var['c_name'], new_wt_seq, new_mt_seq))
+            log(
+                'INFO',
+                f"UPDATE variant_feature SET wt_seq = '{new_wt_seq}', mt_seq = '{new_mt_seq}' WHERE id = '{var['id']}'",
+            )
+            log('INFO', f"variant:{var['c_name']}, WT:{new_wt_seq}, MT:{new_mt_seq}")
             j += 1
-    log('INFO', '{} variants updated / {} checked'.format(j, len(res)))
+    log('INFO', f'{j} variants updated / {len(res)} checked')
 
 if __name__ == '__main__':
     main()

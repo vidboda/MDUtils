@@ -37,7 +37,7 @@ def get_file_list(sqlPath):
     if sqlFiles:
         return(sqlFiles)
     else:
-        log('ERROR', 'No SQL files in path {}'.format(sqlPath))
+        log('ERROR', f'No SQL files in path {sqlPath}')
 
 
 def main():
@@ -61,15 +61,15 @@ def main():
         if match_object is not None:
             # if re.search(r'[\w\d-]+_NM_\d+_SQL.sql', sqlFile):
             # match_object = re.search(r'([\w\d-]+)_(NM_\d+)_SQL.sql', sqlFile)
-            gene = match_object.group(1)
-            isoform = match_object.group(2)
+            gene = match_object[1]
+            isoform = match_object[2]
             curs.execute(
                 "SELECT name[1], name[2] FROM gene WHERE name[1] = '{0}' AND name[2] = '{1}'".format(gene, isoform)
             )
             res = curs.fetchone()
             if res is None:
                 i += 1
-                for line in open(os.path.join(sqlPath, sqlFile)).readlines():
+                for line in open(os.path.join(sqlPath, sqlFile)):
                     if re.match('INSERT INTO (gene|segment|protein_domain)', line):
                         try:
                             line = re.sub(",'',", ",NULL,", line)
@@ -82,7 +82,7 @@ def main():
 
                 log('INFO', '{0} inserted - #{1}'.format(sqlFile, str(i)))
         else:
-            log('WARNING', 'Bad regexp for {}'.format(sqlFile))
+            log('WARNING', f'Bad regexp for {sqlFile}')
 
     db.commit()
 

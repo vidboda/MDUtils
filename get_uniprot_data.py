@@ -19,15 +19,17 @@ def main():
     # get a file of uniprot id list as input, otherwise queries the whole database
     id_file = None
     id_list = []
-    if args.file and \
-            os.path.isfile(args.file):
-        # log('DEBUG', 'File: {0}'.format(args.file))
-        id_file = args.file
-        for line in open(id_file).readlines():
-            if re.search(r'^\w+$', line):
-                id_list.append(line.rstrip())
-    elif args.file:
-        log('ERROR', 'Invalid input path for gene file, please check your command')
+    if args.file:
+        if os.path.isfile(args.file):
+            # log('DEBUG', 'File: {0}'.format(args.file))
+            id_file = args.file
+            id_list.extend(
+                line.rstrip()
+                for line in open(id_file)
+                if re.search(r'^\w+$', line)
+            )
+        else:
+            log('ERROR', 'Invalid input path for gene file, please check your command')
     # get db connector and cursor
     db_pool, db = get_db()
     curs = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
@@ -37,10 +39,9 @@ def main():
             "SELECT id FROM uniprot"
         )
         res_ids = curs.fetchall()
-        for id in res_ids:
-            id_list.append(id['id'])
+        id_list.extend(id['id'] for id in res_ids)
     header = {
-        'User-Agent': 'python-requests Python/{}.{}.{} - MDUtils'.format(sys.version_info[0], sys.version_info[1], sys.version_info[2]),
+        'User-Agent': f'python-requests Python/{sys.version_info[0]}.{sys.version_info[1]}.{sys.version_info[2]} - MDUtils'
     }
     for id in id_list:
         # exists in MD?
@@ -90,7 +91,7 @@ def main():
         for line in open('{0}{1}.gff'.format(
             md_utilities.local_files['uniprot']['abs_path'],
             id
-        )).readlines():
+        )):
             # get domain info
             if re.search(rf'^{id}\t', line):
                 info = re.split('\t', line)

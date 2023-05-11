@@ -36,22 +36,19 @@ def main():
         count = curs.rowcount
         log('INFO', 'Found {0} variants to check'.format(count))
         i = 0
-        j = 0
-        for var in res:
-            j += 1
+        for j, var in enumerate(res, start=1):
             if j % 500 == 0:
                 log('INFO', '{0}/{1} variant checked'.format(j, count))
             tb = tabix.open(args.dbsnp_file)
             query = "{0}:{1}-{2}".format(var['ncbi_name'], var['pos'], var['pos'])
             records = tb.querys(query)
             for record in records:
-                match_object = re.search(r'RS=(\d+);', record[7])
-                if match_object:
+                if match_object := re.search(r'RS=(\d+);', record[7]):
                     pos_ref_list = re.split(',', record[3])
                     pos_alt_list = re.split(',', record[4])
                     if var['pos_ref'] in pos_ref_list and \
                             var['pos_alt'] in pos_alt_list:
-                        new_rs_id = match_object.group(1)
+                        new_rs_id = match_object[1]
                         # need to update var entry
                         curs.execute(
                             """

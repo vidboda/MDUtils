@@ -23,7 +23,7 @@ def main():
     curs = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
     i = 0
 
-    for geneLine in open(gnomadFile).readlines():
+    for geneLine in open(gnomadFile):
         geneLineList = geneLine.split("\t")
         # print(geneLineList[0])
         curs.execute(  # exists in MD?
@@ -113,7 +113,7 @@ def main():
                 #     )
                 # )
 
-    log('INFO', '{} annotations added'.format(i))
+    log('INFO', f'{i} annotations added')
 
     db.commit()
     db_pool.putconn(db)

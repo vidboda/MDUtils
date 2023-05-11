@@ -20,7 +20,7 @@ def download_vv_file(gene, transcript):
         gene
     )
     # check if the file has already been modified today
-    if ((time.time() - os.path.getmtime(vv_json_gene_file)) / 3600) > 24:
+    if time.time() - os.path.getmtime(vv_json_gene_file) > 86400:
         vv_url_base = "https://rest.variantvalidator.org"
         http = urllib3.PoolManager(cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())
         vv_url = "{0}/VariantValidator/tools/gene2transcripts/{1}?content-type=application/json".format(vv_url_base, transcript)
@@ -117,7 +117,6 @@ def check_vv_transcript(transcript_found, gene, vv_json, ncbi_chr, ncbi_chr_hg19
                     )
                     db.commit()
                     log('INFO', 'Transcript {0} becomes ok'.format(gene['refseq']))
-                return transcript_found, ncbi_chr, ncbi_chr_hg19
             else:
                 # hg19/38 mapping issue
                 log('WARNING', 'Transcript {0} from gene {1} has hg19/38 mapping issues'.format(gene['refseq'], gene['gene_symbol']))
@@ -125,8 +124,7 @@ def check_vv_transcript(transcript_found, gene, vv_json, ncbi_chr, ncbi_chr_hg19
                 if ncbi_chr[chrom] not in vv_transcript['genomic_spans'] and \
                         ncbi_chr_hg19[chrom] not in vv_transcript['genomic_spans']:
                     default = 'mapping_default'
-                elif ncbi_chr[chrom] not in vv_transcript['genomic_spans'] and \
-                        ncbi_chr_hg19[chrom] in vv_transcript['genomic_spans']:
+                elif ncbi_chr[chrom] not in vv_transcript['genomic_spans']:
                     default = 'hg38_mapping_default'
                 curs.execute(
                     """
@@ -137,7 +135,7 @@ def check_vv_transcript(transcript_found, gene, vv_json, ncbi_chr, ncbi_chr_hg19
                     (default, gene['refseq'])
                 )
                 db.commit()
-                return transcript_found, ncbi_chr, ncbi_chr_hg19
+            return transcript_found, ncbi_chr, ncbi_chr_hg19
     # transcript not in file
     log('WARNING', 'Transcript {0} from gene {1} not found in VV json'.format(gene['refseq'], gene['gene_symbol']))
     if gene['variant_creation'] == 'ok':

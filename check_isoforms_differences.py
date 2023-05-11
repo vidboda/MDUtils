@@ -50,7 +50,7 @@ def main():
         if res_user is None:
             log('ERROR', 'Unknown API key')
         username = res_user['username']
-        log('INFO', 'User: {}'.format(username))
+        log('INFO', f'User: {username}')
 
     db = get_db()
     curs = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
@@ -74,17 +74,17 @@ def main():
         )
         res = curs.fetchall()
         i = 0
+        base_url = "http://10.34.20.79"
         for gene in res:
             i += 1
             log('INFO', 'Treating gene {0} - #{1}'.format(gene['gene_symbol'], i))
             full_nm = gene['refseq']
-            base_url = "http://10.34.20.79"
             md_url = '{0}/MD/api/gene/{1}'.format(base_url, gene['gene_symbol'])
             http = urllib3.PoolManager(cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())
             try:
                 md_data = json.loads(http.request('GET', md_url).data.decode('utf-8'))
             except Exception:
-                log('WARNING', 'MD not responding for {}'.format(gene['hgnc']))
+                log('WARNING', f"MD not responding for {gene['hgnc']}")
             if full_nm in md_data and \
                     md_data[full_nm]['canonical'] is True:
                 # log('INFO', 'No change for {}'.format(gene['hgnc']))
@@ -92,9 +92,7 @@ def main():
             elif full_nm not in md_data:
                 log('DEBUG', '{0}-{1}'.format(md_data, full_nm))
             for key in md_data:
-                matchobj = re.search(r'^(NM_\d+)\.\d+$', key)
-                if matchobj:
-                    new_nm = matchobj.group(1)
+                if matchobj := re.search(r'^(NM_\d+)\.\d+$', key):
                     if md_data[key]['canonical'] is True:
                         diff[gene['gene_symbol']] = {
                             'old_can': full_nm,
@@ -109,6 +107,7 @@ def main():
                             """,
                             (gene['gene_symbol'],)
                         )
+                        new_nm = matchobj[1]
                         curs.execute(
                             """
                             UPDATE gene
