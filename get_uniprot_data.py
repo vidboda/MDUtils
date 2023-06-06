@@ -86,7 +86,7 @@ def main():
                 encoding='utf-8'
             )
             gff_file.write(uniprot_response)
-        uniprot_interesting = ['Domain', 'Region', 'Motif', 'Zinc finger', 'Repeat'] # Compositional bias
+        uniprot_interesting = ['Domain', 'Region', 'Motif', 'Zinc finger', 'Repeat', 'DNA binding', 'Binding site'] # Compositional bias
         for line in open('{0}{1}.gff'.format(
             md_utilities.local_files['uniprot']['abs_path'],
             id
