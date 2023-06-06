@@ -99,6 +99,8 @@ def main():
                 if info[2] in uniprot_interesting and \
                         re.search('=.+;', info[8]):
                     name = re.split('=', re.split(';', info[8])[0])[1]
+                    if info[2] != 'Domain':
+                        name = '{0}:{1}'.format(info[2], name)
                     # exists?
                     curs.execute(
                         """
@@ -115,8 +117,6 @@ def main():
                         )
                     )
                     res_exists = curs.fetchone()
-                    if info[2] != 'Domain':
-                        name = '{0}:{1}'.format(info[2], name)
                     if len(name) > 79:
                         # log('WARNING', 'name too long for {0}'.format(info))
                         continue
