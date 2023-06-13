@@ -26,7 +26,7 @@ def get_last_md5_file(resource_dir, resource_type, resource_regexp, target_suffi
     files = os.listdir(resource_dir)
     dates = []
     for current_file in files:
-        # print(current_file)
+        # log("DEBUG", current_file)
         match_obj = re.search(rf'{resource_regexp}{target_suffix}{suffix}.md5$', current_file)
         if match_obj:
             dates.append(match_obj.group(1))
@@ -71,6 +71,8 @@ def get_new_ncbi_resource_file(http, resource_type, resource_dir, regexp, label,
         resource_dir_html = http.request('GET', url).data.decode('utf-8')
         resource_dir_content = re.split('\n', resource_dir_html)
         for html in resource_dir_content:
+            # here for dbsnp we need to fetch for the highest suffix between e.g.
+            # GCF_000001405.25.gz and GCF_000001405.40.gz
             match_obj = re.search(rf'\"{regexp}{target_suffix}.gz\"', html)
             if match_obj:
                 break
@@ -95,9 +97,13 @@ def get_new_ncbi_resource_file(http, resource_type, resource_dir, regexp, label,
             if distant_md5:
                 # Get md5 from local file
                 # current_md5_value = get_last_clinvar_md5_file('{}clinvar/hg38/'.format(resources_path))
-                current_md5_value = get_last_md5_file(resource_dir, resource_type, regexp, target_suffix, '.gz')
-                log('INFO', '{0} local md5: {1}'.format(label, current_md5_value))
-                exit
+                # still this changing dbsnp suffix stuff
+                if label != 'dbSNP':
+                    current_md5_value = get_last_md5_file(resource_dir, resource_type, regexp, target_suffix, '.gz')
+                    log('INFO', '{0} local md5: {1}'.format(label, current_md5_value))
+                else:
+                    # no need for md5 if a new dbsnp version has been released
+                    current_md5_value = 'random'
                 if current_md5_value != distant_md5:
                     # Download remote file
                     # log('DEBUG', '{0}{1}_{2}{3}.gz'.format(url, resource_type, resource_date, target_suffix))
@@ -235,8 +241,13 @@ def main():
             else:
                 log('ERROR', 'Unable to donwload/read dbSNP release file from {}release_notes.txt'.format(dbsnp_url))
             if semaph == 0:
+                log('INFO', 'Will download new version')
                 # we can proceed
-                get_new_ncbi_resource_file(http, 'GCF', '{0}dbsnp/hg38/v{1}/'.format(resources_path, dbsnp_version), r'GCF_(\d+)', 'dbSNP', '{0}VCF/'.format(dbsnp_url), '.38')
+                # IMPORTANT
+                # last argument 'suffix', e.g. '.40' is changing from version to version
+                # currently we need to manually change it
+                get_new_ncbi_resource_file(http, 'GCF', '{0}dbsnp/hg38/v{1}/'.format(resources_path, dbsnp_version), r'GCF_(\d+)', 'dbSNP', '{0}VCF/'.format(dbsnp_url), '.40')
+                log('INFO', 'New version downloaded')
 
 
 if __name__ == '__main__':
