@@ -44,7 +44,7 @@ def get_last_md5_file(resource_dir, resource_type, resource_regexp, target_suffi
 
 def download_file_from_server_endpoint(server_endpoint, local_file_path):
     # Send HTTP GET request to server and attempt to receive a response
-    response = requests.get(server_endpoint)
+    response = requests.get(server_endpoint, stream=True)
     # If the HTTP GET request can be served
     # log('DEBUG', response.status_code)
     if response.status_code == 200:
@@ -52,7 +52,7 @@ def download_file_from_server_endpoint(server_endpoint, local_file_path):
         try:
             log('INFO', 'Downloading file as {}'.format(local_file_path))
             with open(local_file_path, 'wb') as local_file:
-                for chunk in response.iter_content(chunk_size=128):
+                for chunk in response.iter_content(chunk_size=8192):
                     local_file.write(chunk)
             # log('DEBUG', 'Downloaded file as {}'.format(local_file_path))
         except Exception:
