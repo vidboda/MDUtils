@@ -67,39 +67,6 @@ def fill_table(clinvar_last, var, clinsig_last, clinsig2nd_last, clinvar_last_ve
         }
 
 
-# def trigger_alert(app, var, clinsig_last, clinsig2nd_last, clinvar_last_version, clinvar2nd_last_version, generic_clinsig):
-#     if re.search(rf'{generic_clinsig}', clinsig2nd_last) and \
-#             not re.search(rf'{generic_clinsig}', clinsig_last):
-#         with app.app_context():
-#             md_utilities.send_email(
-#                 md_utilities.prepare_email_html(
-#                     'MobiDetails Clinvar watch',
-#                     """
-#                     <p>Dear {0},</p>
-#                     <p>The Clinvar interpretation of a variant that you are watching has changed with the last release:</p>
-#                     <ul>
-#                         <li>{1}({2}):c.{3} - p.{4}: in Clinvar release {5}: {6}, becomes</li>
-#                         <li>{1}({2}):c.{3} - p.{4}: in Clinvar release {7}: {8}</li>
-#                     </ul>
-#                     <p>Check out this variant in <a href='https://mobidetails.iurc.montp.inserm.fr/MD/api/variant/{9}/browser/' target='_blank'>MobiDetails</a> or <a href='https://mobidetails.iurc.montp.inserm.fr/MD/auth/login' target='_blank'>connect</a> to modify your Clinvar watch settings or modify your list of followed variants.</p>
-#                     """.format(
-#                         var['username'],
-#                         var['refseq'],
-#                         var['gene_symbol'],
-#                         var['c_name'],
-#                         var['p_name'],
-#                         clinvar2nd_last_version,
-#                         clinsig2nd_last,
-#                         clinvar_last_version,
-#                         clinsig_last,
-#                         var['feature_id']
-#                     ),
-#                     False
-#                 ),
-#                 '[MobiDetails - Clinvar watch]',
-#                 [var['email']]
-#         )
-
 def get_value_from_tabix_file(tb, var):
     query = "{0}:{1}-{2}".format(var['chr'], var['pos'], var['pos'])
     try:
