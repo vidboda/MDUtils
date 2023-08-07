@@ -16,8 +16,11 @@ from MobiDetailsApp import md_utilities, create_app
 # returns significant changes, e.g. VUS to likely pathogenic
 # can be croned after a clinvar update
 
+result_dict = {}
+clinvar_url = 'https://www.ncbi.nlm.nih.gov/clinvar'
 
 def search_clinsig(clinvar_list):
+    # retrieves CLNSIG from clinvar VCF
     match_object = re.search(r'CLNSIG=([\w\/\|]+);CLNSIGCONF=', clinvar_list[7])
     if match_object:
          return match_object.group(1)
@@ -25,42 +28,77 @@ def search_clinsig(clinvar_list):
     if match_object:
         # log('DEBUG', clinvar_last[7])
         return match_object.group(1)
+    match_object = re.search(r'CLNREVSTAT=no_interpretation_for_the_single_variant', clinvar_list[7])
+    if match_object:
+        return
     else:
         log('WARNING', 'Bad format for clinvar_list field: {0}'.format(clinvar_list))
 
 
-def trigger_alert(app, var, clinsig_last, clinsig2nd_last, clinvar_last_version, clinvar2nd_last_version, generic_clinsig):
+def getAlleleID(clinvar_list):
+    # retrieves ALLELEID from clinvar VCF
+    match_object = re.search(r'ALLELEID=(\d+);CLNDISDB=', clinvar_list[7])
+    if match_object:
+         return match_object.group(1)
+
+
+def fill_table(clinvar_last, var, clinsig_last, clinsig2nd_last, clinvar_last_version, clinvar2nd_last_version, generic_clinsig):
+    # builds a dict of type dict{user: {variant_id: {clinvar2nd_last_version:clinsig,clinvar_last_version:clinsig}}}
     if re.search(rf'{generic_clinsig}', clinsig2nd_last) and \
             not re.search(rf'{generic_clinsig}', clinsig_last):
-        with app.app_context():
-            md_utilities.send_email(
-                md_utilities.prepare_email_html(
-                    'MobiDetails Clinvar watch',
-                    """
-                    <p>Dear {0},</p>
-                    <p>The Clinvar interpretation of a variant that you are watching has changed with the last release:</p>
-                    <ul>
-                        <li>{1}({2}):c.{3} - p.{4}: in Clinvar release {5}: {6}, becomes</li>
-                        <li>{1}({2}):c.{3} - p.{4}: in Clinvar release {7}: {8}</li>
-                    </ul>
-                    <p>Check out this variant in <a href='https://mobidetails.iurc.montp.inserm.fr/MD/api/variant/{9}/browser/' target='_blank'>MobiDetails</a> or <a href='https://mobidetails.iurc.montp.inserm.fr/MD/auth/login' target='_blank'>connect</a> to modify your Clinvar watch settings or modify your list of followed variants.</p>
-                    """.format(
-                        var['username'],
-                        var['refseq'],
-                        var['gene_symbol'],
-                        var['c_name'],
-                        var['p_name'],
-                        clinvar2nd_last_version,
-                        clinsig2nd_last,
-                        clinvar_last_version,
-                        clinsig_last,
-                        var['feature_id']
-                    ),
-                    False
-                ),
-                '[MobiDetails - Clinvar watch]',
-                [var['email']]
+        vcf_str = '{0}_{1}_{2}_{3}'.format(
+            var['chr'],
+            var['pos'],
+            var['pos_ref'],
+            var['pos_alt'],
         )
+        if var['mobiuser_id'] in result_dict and \
+                vcf_str in result_dict[var['mobiuser_id']]:
+            return
+        result_dict.setdefault(var['mobiuser_id'], {'username': var['username'], 'email': var['email']})[vcf_str] = {
+            clinvar2nd_last_version: clinsig2nd_last,
+            clinvar_last_version: clinsig_last,
+            'refseq': var['refseq'],
+            'gene_symbol': var['gene_symbol'],
+            'c_name': var['c_name'],
+            'p_name': var['p_name'],
+            'clinvar_allele_id': getAlleleID(clinvar_last),
+            'mobidetails_id': var['feature_id']
+        }
+
+
+# def trigger_alert(app, var, clinsig_last, clinsig2nd_last, clinvar_last_version, clinvar2nd_last_version, generic_clinsig):
+#     if re.search(rf'{generic_clinsig}', clinsig2nd_last) and \
+#             not re.search(rf'{generic_clinsig}', clinsig_last):
+#         with app.app_context():
+#             md_utilities.send_email(
+#                 md_utilities.prepare_email_html(
+#                     'MobiDetails Clinvar watch',
+#                     """
+#                     <p>Dear {0},</p>
+#                     <p>The Clinvar interpretation of a variant that you are watching has changed with the last release:</p>
+#                     <ul>
+#                         <li>{1}({2}):c.{3} - p.{4}: in Clinvar release {5}: {6}, becomes</li>
+#                         <li>{1}({2}):c.{3} - p.{4}: in Clinvar release {7}: {8}</li>
+#                     </ul>
+#                     <p>Check out this variant in <a href='https://mobidetails.iurc.montp.inserm.fr/MD/api/variant/{9}/browser/' target='_blank'>MobiDetails</a> or <a href='https://mobidetails.iurc.montp.inserm.fr/MD/auth/login' target='_blank'>connect</a> to modify your Clinvar watch settings or modify your list of followed variants.</p>
+#                     """.format(
+#                         var['username'],
+#                         var['refseq'],
+#                         var['gene_symbol'],
+#                         var['c_name'],
+#                         var['p_name'],
+#                         clinvar2nd_last_version,
+#                         clinsig2nd_last,
+#                         clinvar_last_version,
+#                         clinsig_last,
+#                         var['feature_id']
+#                     ),
+#                     False
+#                 ),
+#                 '[MobiDetails - Clinvar watch]',
+#                 [var['email']]
+#         )
 
 def get_value_from_tabix_file(tb, var):
     query = "{0}:{1}-{2}".format(var['chr'], var['pos'], var['pos'])
@@ -168,19 +206,78 @@ def main():
         if clinsig_last and \
                 clinsig2nd_last:
             # {B, LB} becomes sthg else
-            trigger_alert(app, var, clinsig_last, clinsig2nd_last, clinvar_last_version, clinvar2nd_last_version, 'enign')
+            fill_table(clinvar_last, var, clinsig_last, clinsig2nd_last, clinvar_last_version, clinvar2nd_last_version, 'enign')
             # {P, LP} becomes sthg else
-            trigger_alert(app, var, clinsig_last, clinsig2nd_last, clinvar_last_version, clinvar2nd_last_version, 'athogenic')
+            fill_table(clinvar_last, var, clinsig_last, clinsig2nd_last, clinvar_last_version, clinvar2nd_last_version, 'athogenic')
             # VUS becomes sthg else
-            trigger_alert(app, var, clinsig_last, clinsig2nd_last, clinvar_last_version, clinvar2nd_last_version, 'Uncertain_significance')
+            fill_table(clinvar_last, var, clinsig_last, clinsig2nd_last, clinvar_last_version, clinvar2nd_last_version, 'Uncertain_significance')
             # Conflicting_interpretations_of_pathogenicity becomes sthg
-            trigger_alert(app, var, clinsig_last, clinsig2nd_last, clinvar_last_version, clinvar2nd_last_version, 'Conflicting_interpretations_of_pathogenicity')
+            fill_table(clinvar_last, var, clinsig_last, clinsig2nd_last, clinvar_last_version, clinvar2nd_last_version, 'Conflicting_interpretations_of_pathogenicity')
         elif clinsig_last and \
                 not clinsig2nd_last:
             clinsig2nd_last = 'Not recorded'
             # nothing becomes sthg
-            trigger_alert(app, var, clinsig_last, clinsig2nd_last, clinvar_last_version, clinvar2nd_last_version, 'recorded')
+            fill_table(clinvar_last, var, clinsig_last, clinsig2nd_last, clinvar_last_version, clinvar2nd_last_version, 'recorded')
     db_pool.putconn(db)
+    if result_dict:
+        with app.app_context():
+            for mobiuser in result_dict:
+                email_html = """
+                <p>Dear {0},</p>
+                <p>Please find below a table summarizing the last changes in ClinVar concerning the variants you are watching:</p><br/>
+                <table border="1" frame="hsides" rules="rows">
+                    <tr>
+                        <th rowspan="2" scope="col">Variant</th>
+                        <th colspan="2" scope="col">ClinVar release / interpretation</th>
+                    </tr>
+                    <tr>
+                        <th scope="col">{1}</th>
+                        <th scope="col">{2}</th>
+                    </tr>
+                """.format(
+                    result_dict[mobiuser]['username'],
+                    clinvar2nd_last_version,
+                    clinvar_last_version
+                )
+                # add variants
+                for feature in result_dict[mobiuser]:
+                    # search for vcf_str
+                    if re.search(r'^[\dXY]{1,2}_\d+_[ATGC]+_[ATGC]+$', feature):
+                        # variant
+                        variant = result_dict[mobiuser][feature]
+                        email_html = email_html + """
+                        <tr>
+                            <td><a href='https://mobidetails.iurc.montp.inserm.fr/MD/api/variant/{0}/browser/'>{1}({2}):c.{3} - {4}</a></td>
+                            <td>{5}</td>
+                            <td><a href='{6}?term=({7}[AlleleID])'>{8}</a></td>
+                        </tr>
+                        """.format(
+                            variant['mobidetails_id'],
+                            variant['refseq'],
+                            variant['gene_symbol'],
+                            variant['c_name'],
+                            variant['p_name'],
+                            variant[clinvar2nd_last_version],
+                            clinvar_url,
+                            variant['clinvar_allele_id'],
+                            variant[clinvar_last_version]
+                        )
+                # finalize email
+                email_html = email_html + """
+                            </table>
+                            <p>You can <a href='https://mobidetails.iurc.montp.inserm.fr/MD/auth/login' target='_blank'>connect</a> to modify your Clinvar watch settings or modify your list of followed variants.</p>
+                            """
+                
+                md_utilities.send_email(
+                    md_utilities.prepare_email_html(
+                        'MobiDetails Clinvar watch',
+                        email_html,
+                        False
+                    ),
+                    '[MobiDetails - Clinvar watch]',
+                    [result_dict[mobiuser]['email']]
+                )
+    
 
 if __name__ == '__main__':
     main()
