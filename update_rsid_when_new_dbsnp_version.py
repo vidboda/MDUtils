@@ -12,10 +12,10 @@ from precompute_spipv2 import get_db, log
 
 def main():
     # script meant to update variants when the canonical form of a gene is changed
-    parser = argparse.ArgumentParser(description='Define a canonical transcript per gene when several are defined',
-                                     usage='python update_canonical_when_several.py -k md_api_key -g gene_hgnc')
+    parser = argparse.ArgumentParser(description='Update rsids with a new version of dbSNP',
+                                     usage='python update_rsid_when_new_dbsnp_version.py -d dbSNP_VCF_file')
     parser.add_argument('-d', '--dbsnp-file', default='', required=True,
-                        help='Path to the dbSNP file')
+                        help='Path to the bgzipped/tabixed dbSNP VCF file')
     args = parser.parse_args()
     if os.path.isfile(args.dbsnp_file):
         db_pool, db = get_db()

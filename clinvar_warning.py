@@ -24,11 +24,12 @@ def search_clinsig(clinvar_list):
     match_object = re.search(r'CLNSIG=([\w\/\|]+);CLNSIGCONF=', clinvar_list[7])
     if match_object:
          return match_object.group(1)
-    match_object = re.search(r'CLNSIG=([\w\/\|]+);CLNVC=', clinvar_list[7])
+    match_object = re.search(r'CLNSIG=([\w\/\|,]+);CLNVC=', clinvar_list[7])
     if match_object:
         # log('DEBUG', clinvar_last[7])
         return match_object.group(1)
-    match_object = re.search(r'CLNREVSTAT=no_interpretation_for_the_single_variant', clinvar_list[7])
+    # match_object = re.search(r'CLNREVSTAT=no_interpretation_for_the_single_variant', clinvar_list[7]) # replaced 20240127
+    match_object = re.search(r'CLNREVSTAT=no_classification_for_the_single_variant', clinvar_list[7])
     if match_object:
         return
     else:
@@ -178,8 +179,10 @@ def main():
             fill_table(clinvar_last, var, clinsig_last, clinsig2nd_last, clinvar_last_version, clinvar2nd_last_version, 'athogenic')
             # VUS becomes sthg else
             fill_table(clinvar_last, var, clinsig_last, clinsig2nd_last, clinvar_last_version, clinvar2nd_last_version, 'Uncertain_significance')
-            # Conflicting_interpretations_of_pathogenicity becomes sthg
-            fill_table(clinvar_last, var, clinsig_last, clinsig2nd_last, clinvar_last_version, clinvar2nd_last_version, 'Conflicting_interpretations_of_pathogenicity')
+            # Conflicting_interpretations_of_pathogenicity becomes sthg - replaced w/ Conflicting_classifications_of_pathogenicity 202401278
+            # fill_table(clinvar_last, var, clinsig_last, clinsig2nd_last, clinvar_last_version, clinvar2nd_last_version, 'Conflicting_interpretations_of_pathogenicity')
+            # Conflicting_classifications_of_pathogenicity becomes sthg
+            fill_table(clinvar_last, var, clinsig_last, clinsig2nd_last, clinvar_last_version, clinvar2nd_last_version, 'Conflicting_classifications_of_pathogenicity')
         elif clinsig_last and \
                 not clinsig2nd_last:
             clinsig2nd_last = 'Not recorded'
