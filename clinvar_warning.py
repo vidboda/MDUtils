@@ -1,11 +1,6 @@
-# import os
 import sys
 import re
-# import time
-# import json
-# import urllib3
 import tabix
-# import certifi
 import psycopg2
 import psycopg2.extras
 from precompute_spipv2 import get_db, log
@@ -21,13 +16,20 @@ clinvar_url = 'https://www.ncbi.nlm.nih.gov/clinvar'
 
 def search_clinsig(clinvar_list):
     # retrieves CLNSIG from clinvar VCF
-    match_object = re.search(r'CLNSIG=([\w\/\|]+);CLNSIGCONF=', clinvar_list[7])
-    if match_object:
-         return match_object.group(1)
-    match_object = re.search(r'CLNSIG=([\w\/\|,]+);CLNVC=', clinvar_list[7])
-    if match_object:
-        # log('DEBUG', clinvar_last[7])
-        return match_object.group(1)
+    pattern = r'([^=;]+)=([^;]+)'
+    matches = re.findall(pattern, clinvar_list[7])
+    dict_values = {cle: valeur for cle, valeur in matches}
+    if "CLNSIG" in dict_values:
+        return dict_values["CLNSIG"]
+    elif "ONC" in dict_values:
+        return dict_values["ONC"]
+    # match_object = re.search(r'CLNSIG=([\w\/\|]+);CLNSIGCONF=', clinvar_list[7])
+    # if match_object:
+    #      return match_object.group(1)
+    # match_object = re.search(r'CLNSIG=([\w\/\|,]+);CLNVC=', clinvar_list[7])
+    # if match_object:
+    #     # log('DEBUG', clinvar_last[7])
+    #     return match_object.group(1)
     # match_object = re.search(r'CLNREVSTAT=no_interpretation_for_the_single_variant', clinvar_list[7]) # replaced 20240127
     match_object = re.search(r'CLNREVSTAT=no_classification_for_the_single_variant', clinvar_list[7])
     if match_object:
@@ -38,9 +40,14 @@ def search_clinsig(clinvar_list):
 
 def getAlleleID(clinvar_list):
     # retrieves ALLELEID from clinvar VCF
-    match_object = re.search(r'ALLELEID=(\d+);CLNDISDB=', clinvar_list[7])
-    if match_object:
-         return match_object.group(1)
+    pattern = r'([^=;]+)=([^;]+)'
+    matches = re.findall(pattern, clinvar_list[7])
+    dict_values = {cle: valeur for cle, valeur in matches}
+    if "ALLELEID" in dict_values:
+        return dict_values["ALLELEID"]
+    # match_object = re.search(r'ALLELEID=(\d+);CLNDISDB=', clinvar_list[7])
+    # if match_object:
+    #      return match_object.group(1)
 
 
 def fill_table(clinvar_last, var, clinsig_last, clinsig2nd_last, clinvar_last_version, clinvar2nd_last_version, generic_clinsig):
@@ -177,6 +184,8 @@ def main():
             fill_table(clinvar_last, var, clinsig_last, clinsig2nd_last, clinvar_last_version, clinvar2nd_last_version, 'enign')
             # {P, LP} becomes sthg else
             fill_table(clinvar_last, var, clinsig_last, clinsig2nd_last, clinvar_last_version, clinvar2nd_last_version, 'athogenic')
+            # {O, LO} becomes sthg else
+            fill_table(clinvar_last, var, clinsig_last, clinsig2nd_last, clinvar_last_version, clinvar2nd_last_version, 'ncogenic')
             # VUS becomes sthg else
             fill_table(clinvar_last, var, clinsig_last, clinsig2nd_last, clinvar_last_version, clinvar2nd_last_version, 'Uncertain_significance')
             # Conflicting_interpretations_of_pathogenicity becomes sthg - replaced w/ Conflicting_classifications_of_pathogenicity 202401278
@@ -237,7 +246,6 @@ def main():
                             </table>
                             <p>You can <a href='https://mobidetails.iurc.montp.inserm.fr/MD/auth/login' target='_blank'>connect</a> to modify your Clinvar watch settings or modify your list of followed variants.</p>
                             """
-                
                 md_utilities.send_email(
                     md_utilities.prepare_email_html(
                         'MobiDetails Clinvar watch',
