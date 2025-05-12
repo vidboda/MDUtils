@@ -37,11 +37,12 @@ def main():
         log('INFO', 'Found {0} variants to check'.format(count))
         i = 0
         j = 0
+        tb = tabix.open(args.dbsnp_file)
         for var in res:
             j += 1
             if j % 500 == 0:
                 log('INFO', '{0}/{1} variant checked'.format(j, count))
-            tb = tabix.open(args.dbsnp_file)
+            # tb = tabix.open(args.dbsnp_file)
             query = "{0}:{1}-{2}".format(var['ncbi_name'], var['pos'], var['pos'])
             records = tb.querys(query)
             for record in records:
