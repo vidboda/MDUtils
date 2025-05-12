@@ -1,5 +1,6 @@
 import os
 import re
+# import time
 import urllib3
 import certifi
 import json
@@ -10,6 +11,24 @@ import argparse
 from precompute_spipv2 import get_db, log
 from MobiDetailsApp import md_utilities
 
+
+def call_vv(vv_url, http, curs, db):
+    try:
+        vv_data = json.loads(http.request('GET', vv_url).data.decode('utf-8'))
+    except Exception:
+        log('WARNING', 'No value for {0}'.format(gene['gene_symbol']))
+        # disable in MD
+        curs.execute(
+            """
+            UPDATE gene
+            SET variant_creation = 'not_in_vv_json'
+            WHERE gene_symbol = %s
+            """,
+            (gene['gene_symbol'],)
+        )
+        db.commit()
+        vv_data['mdutils'] = 'exception'
+    return vv_data
 
 def main():
     # script meant to be croned to update transcripts in MD according to VariantValidator
@@ -22,7 +41,8 @@ def main():
     # uses VV API genes2transcript
     # https://rest.variantvalidator.org/VariantValidator/tools/gene2transcripts/NM_130786?content-type=application%2Fjson
     # vv_url_base = "https://rest.variantvalidator.org"
-    vv_url_base = "https://www608.lamp.le.ac.uk"
+    # vv_url_base = "https://www608.lamp.le.ac.uk"
+    vv_url_base = "http://rvv.chu-montpellier.fr"
 
     parser = argparse.ArgumentParser(description='Update MD gene files from VV', usage='python update_md_transcripts.py [-f path/to/dir/containing/genes/file.txt]')
     parser.add_argument('-f', '--file', default='', required=False, help='Path to the genes file to be updated')
@@ -65,7 +85,7 @@ def main():
     count = curs.rowcount
     i = 0
     for gene in genes:
-        # log('DEBUG', '{}-{}'.format(gene['name'][0], i))
+        # log('DEBUG', '{}-{}'.format(gene['gene_symbol'], i))
         i += 1
         if i % 500 == 0:
             log('INFO', '{0}/{1} genes checked'.format(i, count))
@@ -84,46 +104,22 @@ def main():
                 hg19_ncbi_chr = chrom['ncbi_name']
             elif chrom['genome_version'] == 'hg38':
                 ncbi_chr = chrom['ncbi_name']
-        db.commit()
+        # db.commit()
         # get VV info for the gene
         http = urllib3.PoolManager(cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())
-        vv_url = "{0}/VariantValidator/tools/gene2transcripts/{1}?content-type=application/json".format(vv_url_base, gene['refseq'])
+        vv_url = "{0}/VariantValidator/tools/gene2transcripts/{1}?content-type=application/json".format(vv_url_base, gene['gene_symbol'])
         # log('DEBUG', 'Calling VariantValidator gene API: {}'.format(vv_url))
-        try:
-            vv_data = json.loads(http.request('GET', vv_url).data.decode('utf-8'))
-        except Exception:
-            log('WARNING', 'No value for {0}'.format(gene['gene_symbol']))
-            # disable in MD
-            curs.execute(
-                """
-                UPDATE gene
-                SET variant_creation = 'not_in_vv_json'
-                WHERE gene_symbol = %s
-                """,
-                (gene['gene_symbol'],)
-            )
-            db.commit()
+        vv_data = call_vv(vv_url, http, curs, db)
+        if 'mdutils' in vv_data:
             continue
         # Store json file in /mobidic_resources/variantValidator/genes/
         if 'error' in vv_data:
-            log('WARNING', 'VV error for gene {0}'.format(gene['gene_symbol']))
-            # try querying by HGNC symbol instead of refseq
-            vv_url = "{0}/VariantValidator/tools/gene2transcripts/{1}?content-type=application/json".format(vv_url_base, gene['gene_symbol'])
+            log('WARNING', 'VV error for gene {0} - changed gene symbol?'.format(gene['gene_symbol']))
+            # try querying by refseq instead of HGNC symbol
+            vv_url = "{0}/VariantValidator/tools/gene2transcripts/{1}?content-type=application/json".format(vv_url_base, gene['refseq'])
             # log('DEBUG', 'Calling VariantValidator gene API: {}'.format(vv_url))
-            try:
-                vv_data = json.loads(http.request('GET', vv_url).data.decode('utf-8'))
-            except Exception:
-                log('WARNING', 'No value for {0}'.format(gene['gene_symbol']))
-                # disable in MD
-                curs.execute(
-                    """
-                    UPDATE gene
-                    SET variant_creation = 'not_in_vv_json'
-                    WHERE gene_symbol = %s
-                    """,
-                    (gene['gene_symbol'],)
-                )
-                db.commit()
+            vv_data = call_vv(vv_url, http, curs, db)
+            if 'mdutils' in vv_data:
                 continue
             if 'error' in vv_data:
                 curs.execute(
@@ -136,6 +132,32 @@ def main():
                 )
                 db.commit()
                 continue
+        if not 'current_symbol' in vv_data:
+            log('DEBUG', vv_data)
+        # check gene symbol
+        if gene['gene_symbol'] != vv_data['current_symbol']:
+            log('WARNING', 'Gene symbol to change: {0} became {1}'.format(gene['gene_symbol'], vv_data['current_symbol']))
+            # update gene symbol
+            curs.execute(
+                """
+                UPDATE gene
+                SET gene_symbol = %s,
+                second_name = CONCAT(second_name, ",", %s),
+                hgnc_name = %s
+                WHERE gene_symbol = %s
+                """,
+                (
+                    vv_data['current_symbol'],
+                    gene['gene_symbol'],
+                    vv_data['current_name'],
+                    gene['gene_symbol']
+                )
+            )
+            db.commit()
+            # reload vv_data with gene_symbol
+            vv_url = "{0}/VariantValidator/tools/gene2transcripts/{1}?content-type=application/json".format(vv_url_base, vv_data['current_symbol'])
+            vv_data = call_vv(vv_url, http, curs, db)
+        # log('DEBUG', 'VV genes files path: {0}'.format(md_utilities.local_files['variant_validator']['abs_path']))
         if not os.path.isfile(
             '{0}{1}.json'.format(
                 md_utilities.local_files['variant_validator']['abs_path'],
@@ -158,8 +180,9 @@ def main():
                     indent=4
                 )
             log('INFO', "VV JSON file copied for gene {0}-{1}".format(gene['gene_symbol'], gene['refseq']))
+            continue
         else:
-            # md5 to check if there is an update
+            # # md5 to check if there is an update
             new_vv_json_hash = hashlib.md5(json.dumps(vv_data, ensure_ascii=False, indent=4).encode()).hexdigest()
             # current md5
             current_vv_file_hash = hashlib.md5()
@@ -190,6 +213,7 @@ def main():
                             indent=4
                         )
                     log('INFO', "VV JSON file replaced for gene {0}-{1}".format(gene['gene_symbol'], gene['refseq']))
+            current_vv_file.close()
         # check hgnc name
         if 'current_name' in vv_data and \
                 'current_symbol' in vv_data:
