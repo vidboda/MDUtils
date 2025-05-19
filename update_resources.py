@@ -162,7 +162,7 @@ def main():
     clinvar_url = 'https://ftp.ncbi.nlm.nih.gov/pub/clinvar/vcf_GRCh38/'
     dbsnp_url = 'https://ftp.ncbi.nih.gov/snp/latest_release/'
     clingen_criteria_url = 'https://cspec.genome.network/cspec/CriteriaCode/summary'
-    resources_path = '/home/adminbioinfo/Devs/MobiDetails/MobiDetailsApp/static/resources/'
+    resources_path = '/data/MobiDetails/resources/'
 
     http = urllib3.PoolManager(cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())
     match_obj = None
