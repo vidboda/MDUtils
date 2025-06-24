@@ -134,29 +134,29 @@ def main():
                 continue
         if not 'current_symbol' in vv_data:
             log('DEBUG', vv_data)
-        # check gene symbol
-        if gene['gene_symbol'] != vv_data['current_symbol']:
-            log('WARNING', 'Gene symbol to change: {0} became {1}'.format(gene['gene_symbol'], vv_data['current_symbol']))
-            # update gene symbol
-            curs.execute(
-                """
-                UPDATE gene
-                SET gene_symbol = %s,
-                second_name = CONCAT(second_name, ",", %s),
-                hgnc_name = %s
-                WHERE gene_symbol = %s
-                """,
-                (
-                    vv_data['current_symbol'],
-                    gene['gene_symbol'],
-                    vv_data['current_name'],
-                    gene['gene_symbol']
-                )
-            )
-            db.commit()
-            # reload vv_data with gene_symbol
-            vv_url = "{0}/VariantValidator/tools/gene2transcripts/{1}?content-type=application/json".format(vv_url_base, vv_data['current_symbol'])
-            vv_data = call_vv(vv_url, http, curs, db)
+        # # check gene symbol
+        # if gene['gene_symbol'] != vv_data['current_symbol']:
+        #     log('WARNING', 'Gene symbol to change: {0} became {1}'.format(gene['gene_symbol'], vv_data['current_symbol']))
+        #     # update gene symbol
+        #     curs.execute(
+        #         """
+        #         UPDATE gene
+        #         SET gene_symbol = %s,
+        #         second_name = CONCAT(second_name, ',', %s),
+        #         hgnc_name = %s
+        #         WHERE gene_symbol = %s
+        #         """,
+        #         (
+        #             vv_data['current_symbol'],
+        #             gene['gene_symbol'],
+        #             vv_data['current_name'],
+        #             gene['gene_symbol']
+        #         )
+        #     )
+        #     db.commit()
+        #     # reload vv_data with gene_symbol
+        #     vv_url = "{0}/VariantValidator/tools/gene2transcripts/{1}?content-type=application/json".format(vv_url_base, vv_data['current_symbol'])
+        #     vv_data = call_vv(vv_url, http, curs, db)
         # log('DEBUG', 'VV genes files path: {0}'.format(md_utilities.local_files['variant_validator']['abs_path']))
         if not os.path.isfile(
             '{0}{1}.json'.format(
@@ -454,6 +454,41 @@ def main():
                         )
                         db.commit()
         # db.commit()
+        # check gene symbol
+        if gene['gene_symbol'] != vv_data['current_symbol']:
+            log('WARNING', 'Gene symbol to change: {0} became {1}'.format(gene['gene_symbol'], vv_data['current_symbol']))
+            # update gene symbol
+            curs.execute(
+                """
+                UPDATE gene
+                SET gene_symbol = %s,
+                second_name = CONCAT(second_name, ',', %s),
+                hgnc_name = %s
+                WHERE gene_symbol = %s
+                """,
+                (
+                    vv_data['current_symbol'],
+                    gene['gene_symbol'],
+                    vv_data['current_name'],
+                    gene['gene_symbol']
+                )
+            )
+            db.commit()
+            # reload vv_data with gene_symbol
+            # vv_url = "{0}/VariantValidator/tools/gene2transcripts/{1}?content-type=application/json".format(vv_url_base, vv_data['current_symbol'])
+            # vv_data = call_vv(vv_url, http, curs, db)
+            # rename old file
+            os.rename(
+                '{0}{1}.json'.format(
+                    md_utilities.local_files['variant_validator']['abs_path'],
+                    gene['gene_symbol']
+                ),
+                '{0}{1}.json'.format(
+                    md_utilities.local_files['variant_validator']['abs_path'],
+                    vv_data['current_symbol']
+                ),
+            )
+
         print('.', end="", flush=True)
     db_pool.putconn(db)
 
