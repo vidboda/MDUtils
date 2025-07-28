@@ -90,9 +90,10 @@ def main():
         log('ERROR', 'No variant to update')
     for var in res:
         http = urllib3.PoolManager(cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())
-        vv_url_base = "https://rest.variantvalidator.org"
+        # vv_url_base = "https://rest.variantvalidator.org"
+        vv_url_base = "http://rvv.chu-montpellier.fr"
         # vv_url_base = "http://0.0.0.0:8000/"
-        vv_url = "{0}/VariantValidator/variantvalidator/GRCh38/{1}-{2}-{3}-{4}/all?content-type=application/json".format(vv_url_base, var['chr'], var['pos'], var['pos_ref'], var['pos_alt'])
+        vv_url = "{0}/VariantValidator/variantvalidator/GRCh38/{1}-{2}-{3}-{4}/auth_all?content-type=application/json".format(vv_url_base, var['chr'], var['pos'], var['pos_ref'], var['pos_alt'])
         log('DEBUG', 'Calling VariantValidator API: {}'.format(vv_url))
         try:
             vv_data = json.loads(http.request('GET', vv_url).data.decode('utf-8'))
