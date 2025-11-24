@@ -20,10 +20,13 @@ def download_vv_file(gene, transcript):
         gene
     )
     # check if the file has already been modified today
-    if ((time.time() - os.path.getmtime(vv_json_gene_file)) / 3600) > 24:
-        vv_url_base = "https://rest.variantvalidator.org"
+    # log('DEBUG', os.path.isfile(vv_json_gene_file))
+    if (os.path.isfile(vv_json_gene_file) is False or \
+        ((time.time() - os.path.getmtime(vv_json_gene_file)) / 3600) > 24):
+        vv_url_base = "http://restvv2.chu-montpellier.fr"
         http = urllib3.PoolManager(cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())
         vv_url = "{0}/VariantValidator/tools/gene2transcripts/{1}?content-type=application/json".format(vv_url_base, transcript)
+        # log('DEBUG', vv_url)
         try:
             vv_data = json.loads(http.request('GET', vv_url).data.decode('utf-8'))
             if 'transcripts' in vv_data:

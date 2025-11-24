@@ -17,8 +17,10 @@ def main():
     # beginning of line example
     # HGNC:24086      A1CF    APOBEC1 complementation factor  protein-coding gene     gene with protein product       Approved
     # so we need id [0].split(':')[1], symbol [1], and validation [3] = protein-coding gene and [5] = Approved
-    hgnc_file = open(md_utilities.local_files['hgnc_full_set']['abs_path'], 'r')
-    # hgnc_file = open('HGNC/hgnc_LRTOMT.txt', 'r')
+    # hgnc_file = open(md_utilities.local_files['hgnc_full_set']['abs_path'], 'r')
+    hgnc_file = open('update_genes/HGNC_snRNA_20251121.txt', 'r')
+    # hgnc_file = open('update_genes/HGNC_lncRNA_20251121.txt', 'r')
+    # hgnc_file = open('update_genes/hgnc_LRTOMT.txt', 'r')
     i = 0
     for line in hgnc_file:
         i += 1
@@ -29,7 +31,10 @@ def main():
         if match_id:
             hgnc_id = match_id.group(1)
             # log('DEBUG', 'Status:{0}'.format(gene_info[4]))
-            if gene_info[3] == 'protein-coding gene' and \
+            if (gene_info[3] == 'protein-coding gene' or \
+                    (gene_info[3] == 'non-coding RNA' and \
+                    (gene_info[4] == 'RNA, small nuclear' or \
+                    gene_info[4] == 'RNA, long non-coding'))) and \
                     gene_info[5] == 'Approved':
                 # log('DEBUG', 'HGNC:{0}'.format(hgnc_id))
                 # suitable for MD
@@ -116,7 +121,7 @@ def main():
                         if 'transcripts' in vv_json:
                             for vv_transcript in vv_json['transcripts']:
                                 if 'reference' in vv_transcript and \
-                                        re.search(r'^NM_\d+\.\d{1,2}', vv_transcript['reference']):
+                                        re.search(r'^N[MR]_\d+\.\d{1,2}', vv_transcript['reference']):
                                     insert_dict['chr'] = vv_transcript['annotations']['chromosome']
                                     if isinstance(insert_dict['chr'], list):
                                         insert_dict['chr'] = insert_dict['chr'][0]
@@ -148,7 +153,7 @@ def main():
                                             ng_match = re.search(r'^(NG_\d+\.\d{1,2})$', acc)
                                             if ng_match:
                                                 insert_dict['ng'] = ng_match.group(1)
-                                        insert_dict['np'] = vv_transcript['translation']
+                                        insert_dict['np'] = vv_transcript['translation'] if vv_transcript['translation'] else 'NULL'
                                         with open('gene2ensembl_hs', 'r') as f:
                                             for line in f:
                                                 line = line.rstrip('\n')
@@ -169,22 +174,12 @@ def main():
                                         t = "', '"
                                         insert_dict['gene_symbol'] = hgnc_current_symbol
                                         insert_dict['refseq'] = vv_transcript['reference']
-                                        log('INFO', "INSERT INTO gene (gene_symbol, refseq, {0}) VALUES ('{1}')".format(
+                                        log('INFO', "INSERT INTO gene ({0}) VALUES ('{1}')".format(
                                                 s.join(insert_dict.keys()),
                                                 t.join(map(str, insert_dict.values()))
                                             ).replace("'NULL'", "NULL")
                                             )
-                                        # curs.execute(
-                                        #     """
-                                        #     INSERT INTO gene (gene_symbol, refseq, {0})
-                                        #     VALUES ('{1}', '{2}', '{3}')
-                                        #     """.format(
-                                        #         s.join(insert_dict.keys()),
-                                        #         hgnc_current_symbol,
-                                        #         vv_transcript['reference'],
-                                        #         t.join(map(str, insert_dict.values()))
-                                        #     ).replace("'NULL'", "NULL")
-                                        # )
+                                        ########### UNCOMMENT WHEN READY
                                         curs.execute(
                                             """
                                             INSERT INTO gene ({0})
@@ -196,14 +191,14 @@ def main():
                                         )
                                         db.commit()
                                     else:
-                                        if re.search(r'NM_\d+\.\d{1,2}', vv_transcript['reference']):
+                                        if re.search(r'N[MR]_\d+\.\d{1,2}', vv_transcript['reference']):
                                             log('WARNING', 'hg19 or hg38 mapping issue for {0}-{1}'.format(vv_transcript['reference'], hgnc_current_symbol))
                         else:
                             log('WARNING', 'No transcript in {0}.json file'.format(hgnc_current_symbol))
                             continue
                 db_pool.putconn(db)
 
-        print('.', end="", flush=True)
+        print('.', end='', flush=True)
 
 
 if __name__ == '__main__':
