@@ -65,7 +65,7 @@ def main():
         if mt_seq_obj:
             log("debug", f"variant: {var['c_name']} - {var['refseq']}")
             begin = mt_seq_obj.group(1)
-            middle = mt_seq.group(2)
+            middle = mt_seq_obj.group(2)
             end = mt_seq_obj.group(3)
             mt_sub_obj = re.search(r'ins([ATGC]+)$', var['c_name'])
             if mt_sub_obj.group(1) != middle:
