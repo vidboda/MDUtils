@@ -61,7 +61,7 @@ def main():
     for var in other_vars:
         log("info", f"variant: {var['c_name']} - {var['refseq']}")
         # slice mt_seq
-        mt_seq_obj = re.search(r'^([ATGC]+)\s([ATGC])-*\s([ATGC]+)$', var['mt_seq'])
+        mt_seq_obj = re.search(r'^([ATGC]+)\s([ATGC]+)-*\s([ATGC]+)$', var['mt_seq'])
         if mt_seq_obj:
             log("debug", f"variant: {var['c_name']} - {var['refseq']}")
             begin = mt_seq_obj.group(1)
