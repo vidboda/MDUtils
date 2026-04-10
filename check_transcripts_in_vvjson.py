@@ -23,12 +23,15 @@ def download_vv_file(gene, transcript):
     # log('DEBUG', os.path.isfile(vv_json_gene_file))
     if (os.path.isfile(vv_json_gene_file) is False or \
         ((time.time() - os.path.getmtime(vv_json_gene_file)) / 3600) > 24):
-        vv_url_base = "http://restvv2.chu-montpellier.fr"
+        vv_url_base = "http://rvv.chu-montpellier.fr"
         http = urllib3.PoolManager(cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())
         vv_url = "{0}/VariantValidator/tools/gene2transcripts/{1}?content-type=application/json".format(vv_url_base, transcript)
         # log('DEBUG', vv_url)
         try:
             vv_data = json.loads(http.request('GET', vv_url).data.decode('utf-8'))
+            if 'error' in vv_data and \
+                    vv_data['error'].startswith("Unable"):
+                raise Exception
             if 'transcripts' in vv_data:
                 with open(
                     vv_json_gene_file,
@@ -42,10 +45,14 @@ def download_vv_file(gene, transcript):
                         indent=4
                     )
                 log('INFO', "VV JSON file copied for gene {0}-{1}".format(gene, transcript))
+                return 'ok'
             else:
+                log('DEBUG', vv_data)
                 log('WARNING', 'No transcript in VV JSON file for {0}'.format(gene))
+                return 'ok'
         except Exception:
             log('WARNING', 'No VV JSON file for {0}'.format(gene))
+            return None
 
 
 def check_vv_file(gene, db, curs, ncbi_chr, ncbi_chr_hg19):

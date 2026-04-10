@@ -18,9 +18,11 @@ def main():
     # HGNC:24086      A1CF    APOBEC1 complementation factor  protein-coding gene     gene with protein product       Approved
     # so we need id [0].split(':')[1], symbol [1], and validation [3] = protein-coding gene and [5] = Approved
     # hgnc_file = open(md_utilities.local_files['hgnc_full_set']['abs_path'], 'r')
-    hgnc_file = open('update_genes/HGNC_snRNA_20251121.txt', 'r')
-    # hgnc_file = open('update_genes/HGNC_lncRNA_20251121.txt', 'r')
+    # hgnc_file = open('update_genes/HGNC_snRNA_20251121.txt', 'r')
+    hgnc_file = open('update_genes/HGNC_lncRNA_20251121.txt', 'r')
     # hgnc_file = open('update_genes/hgnc_LRTOMT.txt', 'r')
+    db_pool, db = get_db()
+    curs = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
     i = 0
     for line in hgnc_file:
         i += 1
@@ -42,8 +44,8 @@ def main():
                 # if ok, check current symbol and change it if needed
                 # else download file from VV and insert new gene and transcript
                 hgnc_current_symbol = gene_info[1]
-                db_pool, db = get_db()
-                curs = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
+                # db_pool, db = get_db()
+                # curs = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
                 curs.execute(  # get genes - one transcript per gene (canonical) - allows update of all trasncripts
                     """
                     SELECT gene_symbol, hgnc_name, second_name
@@ -58,7 +60,10 @@ def main():
                     if md_gene['gene_symbol'] != hgnc_current_symbol:
                         # log('DEBUG', 'Symbol differs for HGNC {0}, MD {1}'.format(hgnc_current_symbol, md_gene['name'][0]))
                         # get the one VV is using
-                        download_vv_file(hgnc_current_symbol, hgnc_current_symbol)
+                        vv_file_state = download_vv_file(hgnc_current_symbol, hgnc_current_symbol)
+                        log('DEBUG', 'vv_file_state: {}'.format(vv_file_state))
+                        if not vv_file_state:
+                            continue
                         vv_file = open('{0}{1}.json'.format(
                             md_utilities.local_files['variant_validator']['abs_path'],
                             hgnc_current_symbol
@@ -100,7 +105,11 @@ def main():
                         db.commit()
                 else:
                     # gene not yet in MD
-                    download_vv_file(hgnc_current_symbol, hgnc_current_symbol)
+                    vv_file_state = download_vv_file(hgnc_current_symbol, hgnc_current_symbol)
+                    if not vv_file_state:
+                        # log('DEBUG', 'vv_file_state: {}'.format(vv_file_state))
+                        continue
+                    # download_vv_file(hgnc_current_symbol, hgnc_current_symbol)
                     vv_file = open('{0}{1}.json'.format(
                         md_utilities.local_files['variant_validator']['abs_path'],
                         hgnc_current_symbol
@@ -108,7 +117,7 @@ def main():
                     vv_json = json.load(vv_file)
                     insert_dict = {}
                     insert_dict['hgnc_id'] = hgnc_id
-                    insert_dict['second_name'] = '{0};{1}'.format(gene_info[10], gene_info[8]).replace('"', '')
+                    insert_dict['second_name'] = '{0};{1}'.format(gene_info[10], gene_info[8]).replace('"', '').replace("'", "\\'")
                     insert_dict['hgnc_name'] = gene_info[2]
                     insert_dict['uniprot_id'] = gene_info[25]
                     if insert_dict['uniprot_id'] == '':
@@ -118,10 +127,26 @@ def main():
                                 vv_json['message'] == 'Internal Server Error'):
                         continue
                     if vv_json['current_symbol'] == hgnc_current_symbol:
+                        # if hgnc_current_symbol == 'RNU2-2':
+                        #     log('DEBUG', vv_json)
                         if 'transcripts' in vv_json:
                             for vv_transcript in vv_json['transcripts']:
+                                # if hgnc_current_symbol == 'RNU2-2':
+                                #     log('DEBUG', vv_transcript['reference'])
                                 if 'reference' in vv_transcript and \
                                         re.search(r'^N[MR]_\d+\.\d{1,2}', vv_transcript['reference']):
+                                    # already existinserted ? https://github.com/openvar/variantValidator/issues/804
+                                    curs.execute(  # get genes - one transcript per gene (canonical) - allows update of all trasncripts
+                                        """
+                                        SELECT refseq
+                                        FROM gene
+                                        WHERE refseq = %s
+                                        """,
+                                        (vv_transcript['reference'],)
+                                    )
+                                    md_transcript = curs.fetchone()
+                                    if md_transcript:
+                                        continue
                                     insert_dict['chr'] = vv_transcript['annotations']['chromosome']
                                     if isinstance(insert_dict['chr'], list):
                                         insert_dict['chr'] = insert_dict['chr'][0]
@@ -140,7 +165,7 @@ def main():
                                                 ncbi_chr_hg19[insert_dict['chr']] = chrom['ncbi_name']
                                             elif chrom['genome_version'] == 'hg38':
                                                 ncbi_chr[insert_dict['chr']] = chrom['ncbi_name']
-                                        db.commit()
+                                        # db.commit()
                                     # chek that we have hg19 and hg38
                                     if ncbi_chr[insert_dict['chr']] in vv_transcript['genomic_spans'] and \
                                             ncbi_chr_hg19[insert_dict['chr']] in vv_transcript['genomic_spans']:
@@ -196,10 +221,9 @@ def main():
                         else:
                             log('WARNING', 'No transcript in {0}.json file'.format(hgnc_current_symbol))
                             continue
-                db_pool.putconn(db)
-
+                # db_pool.putconn(db)
         print('.', end='', flush=True)
-
+    db_pool.putconn(db)
 
 if __name__ == '__main__':
     main()
