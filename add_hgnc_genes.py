@@ -10,7 +10,6 @@ from check_transcripts_in_vvjson import download_vv_file
 
 def main():
     # script to add genes in MD from an HGNC full set download
-    # vv_url_base = "https://www608.lamp.le.ac.uk"
     ncbi_chr = {}
     ncbi_chr_hg19 = {}
     # hgnc file in resources/hgnc/hgnc_complete_set.txt
@@ -117,8 +116,8 @@ def main():
                     vv_json = json.load(vv_file)
                     insert_dict = {}
                     insert_dict['hgnc_id'] = hgnc_id
-                    insert_dict['second_name'] = '{0};{1}'.format(gene_info[10], gene_info[8]).replace('"', '').replace("'", "\\'")
-                    insert_dict['hgnc_name'] = gene_info[2]
+                    insert_dict['second_name'] = '{0};{1}'.format(gene_info[10], gene_info[8]).replace('"', '').replace("'", "")
+                    insert_dict['hgnc_name'] = gene_info[2].replace('"', '').replace("'", "")
                     insert_dict['uniprot_id'] = gene_info[25]
                     if insert_dict['uniprot_id'] == '':
                         insert_dict['uniprot_id'] = 'NULL'

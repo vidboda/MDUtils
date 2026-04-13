@@ -45,14 +45,16 @@ def download_vv_file(gene, transcript):
                         indent=4
                     )
                 log('INFO', "VV JSON file copied for gene {0}-{1}".format(gene, transcript))
-                return 'ok'
+                return True
             else:
                 log('DEBUG', vv_data)
                 log('WARNING', 'No transcript in VV JSON file for {0}'.format(gene))
-                return 'ok'
+                return True
         except Exception:
             log('WARNING', 'No VV JSON file for {0}'.format(gene))
-            return None
+            return False
+    elif os.path.isfile(vv_json_gene_file):
+        return True
 
 
 def check_vv_file(gene, db, curs, ncbi_chr, ncbi_chr_hg19):
