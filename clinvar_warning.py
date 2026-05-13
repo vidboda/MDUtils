@@ -226,7 +226,7 @@ def main():
                         variant = result_dict[mobiuser][feature]
                         email_html = email_html + """
                         <tr>
-                            <td><a href='https://mobidetails.iurc.montp.inserm.fr/MD/api/variant/{0}/browser/'>{1}({2}):c.{3} - {4}</a></td>
+                            <td><a href='https://mobidetails.chu-montpellier.fr/api/variant/{0}/browser/'>{1}({2}):c.{3} - {4}</a></td>
                             <td>{5}</td>
                             <td><a href='{6}?term=({7}[AlleleID])'>{8}</a></td>
                         </tr>
@@ -244,7 +244,7 @@ def main():
                 # finalize email
                 email_html = email_html + """
                             </table>
-                            <p>You can <a href='https://mobidetails.iurc.montp.inserm.fr/MD/auth/login' target='_blank'>connect</a> to modify your Clinvar watch settings or modify your list of followed variants.</p>
+                            <p>You can <a href='https://mobidetails.chu-montpellier.fr/auth/login' target='_blank'>connect</a> to modify your Clinvar watch settings or modify your list of followed variants.</p>
                             """
                 md_utilities.send_email(
                     md_utilities.prepare_email_html(
