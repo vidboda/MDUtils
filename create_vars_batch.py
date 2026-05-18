@@ -45,16 +45,17 @@ def main():
     else:
         api_key = args.api_key
 
-    md_base_url = 'https://mobidetails.iurc.montp.inserm.fr/MD'
+    md_base_url = 'https://mobidetails.chu-montpellier.fr'
     if args.url:
         md_base_url = args.url
     input_format = 'transcript'
     if args.format and \
             args.format == 'genomic':
         input_format = 'genomic'
-    header = {
+    headers = {
         'Accept': 'application/json',
         'User-Agent': 'python-requests Python/{}.{}.{}'.format(sys.version_info[0], sys.version_info[1], sys.version_info[2]),
+        'Authorization': 'Bearer {}'.format(api_key)
     }
 
     print()
@@ -79,13 +80,11 @@ def main():
                     data = {
                         'variant_chgvs': urllib.parse.quote('{0}:{1}'.format(acc_number, var)),
                         'caller': 'cli',
-                        'api_key': api_key
                     }
                     log('INFO', 'Submitting variant {0}:{1} to MobiDetails: {2}'.format(acc_number, var, md_url))
 
                     try:
-                        # md_response = json.loads(http.request('GET', md_url, headers=header).data.decode('utf-8'))
-                        md_response = json.loads(http.request('POST', md_url, headers=header, fields=data).data.decode('utf-8'))
+                        md_response = json.loads(http.request('POST', md_url, headers=headers, fields=data).data.decode('utf-8'))
                     except Exception:
                         log('WARNING', 'MobiDetails call failed for variant {}'.format(variant))
                         continue
@@ -96,7 +95,7 @@ def main():
                     semaph = 'no'
                     # print(md_url_check)
                     # try:
-                    md_check_response = json.loads(http.request('GET', md_url_check, headers=header).data.decode('utf-8'))
+                    md_check_response = json.loads(http.request('GET', md_url_check, headers=headers).data.decode('utf-8'))
                     for flag in md_check_response:
                         if flag == 'HGNC Name':
                             semaph = 'yes'
@@ -105,13 +104,11 @@ def main():
                     # except Exception:
                     #    log('WARNING', 'The gene {} could not be checked for some reason in MobiDetails'.format(gene))
                     if semaph == 'yes':
-                        # md_url = '{0}/api/variant/create_g/{1}/{2}/cli/{3}'.format(md_base_url, g_var, gene, api_key)
                         md_url = '{0}/api/variant/create_g'.format(md_base_url)
                         data = {
                             'variant_ghgvs': g_var,
                             'gene_hgnc': gene,
                             'caller': 'cli',
-                            'api_key': api_key
                         }
                         log('INFO', 'Submitting variant {0} for gene in {1} to MobiDetails: {2}'.format(g_var, gene, md_url))
                         try:

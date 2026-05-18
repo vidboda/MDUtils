@@ -44,7 +44,11 @@ def get_last_md5_file(resource_dir, resource_type, resource_regexp, target_suffi
 
 def download_file_from_server_endpoint(server_endpoint, local_file_path):
     # Send HTTP GET request to server and attempt to receive a response
-    response = requests.get(server_endpoint, stream=True)
+    try:
+        response = requests.get(server_endpoint, stream=True)
+    except requests.exceptions.ConnectionError:
+        log('WARNING', 'failed to connect to {}'.format(server_endpoint))
+        return 'connection exception'
     # If the HTTP GET request can be served
     # log('DEBUG', response.status_code)
     if response.status_code == 200:
@@ -54,11 +58,14 @@ def download_file_from_server_endpoint(server_endpoint, local_file_path):
             with open(local_file_path, 'wb') as local_file:
                 for chunk in response.iter_content(chunk_size=8192):
                     local_file.write(chunk)
+            return 'download ok'
             # log('DEBUG', 'Downloaded file as {}'.format(local_file_path))
         except Exception:
             log('WARNING', 'Unable to download {}'.format(server_endpoint))
+            return 'download exception'
     else:
-        log('WARNING', 'Unable to contact {}'.format(server_endpoint))
+        log('WARNING', 'Unable to contact {} error {}'.format(server_endpoint, response.status_code))
+        return 'error code exception'
 
 
 def get_new_ncbi_resource_file(http, resource_type, resource_dir, regexp, label, url, target_suffix):
@@ -110,18 +117,33 @@ def get_new_ncbi_resource_file(http, resource_type, resource_dir, regexp, label,
                     # log('DEBUG', resource_dir)
                     # log('DEBUG', '{0}{1}_{2}{3}.gz'.format(resource_dir, resource_type, resource_date, target_suffix))
                     # try:
-                    download_file_from_server_endpoint(
+                    download_state = download_file_from_server_endpoint(
                         '{0}{1}_{2}{3}.gz'.format(url, resource_type, resource_date, target_suffix),
                         '{0}{1}_{2}{3}.gz'.format(resource_dir, resource_type, resource_date, target_suffix)
                     )
-                    download_file_from_server_endpoint(
-                        '{0}{1}_{2}{3}.gz.md5'.format(url, resource_type, resource_date, target_suffix),
-                        '{0}{1}_{2}{3}.gz.md5'.format(resource_dir, resource_type, resource_date, target_suffix)
-                    )
-                    download_file_from_server_endpoint(
-                        '{0}{1}_{2}{3}.gz.tbi'.format(url, resource_type, resource_date, target_suffix),
-                        '{0}{1}_{2}{3}.gz.tbi'.format(resource_dir, resource_type, resource_date, target_suffix)
-                    )
+                    if download_state == 'download ok':
+                        download_state = download_file_from_server_endpoint(
+                            '{0}{1}_{2}{3}.gz.md5'.format(url, resource_type, resource_date, target_suffix),
+                            '{0}{1}_{2}{3}.gz.md5'.format(resource_dir, resource_type, resource_date, target_suffix)
+                        )
+                        if download_state == 'download ok':
+                            download_state = download_file_from_server_endpoint(
+                                '{0}{1}_{2}{3}.gz.tbi'.format(url, resource_type, resource_date, target_suffix),
+                                '{0}{1}_{2}{3}.gz.tbi'.format(resource_dir, resource_type, resource_date, target_suffix)
+                            )
+                            if download_state != 'download ok':
+                                # rollback
+                                log('WARNING', 'Removing previsously downloaded gz and md5 files')
+                                os.remove('{0}{1}_{2}{3}.gz'.format(resource_dir, resource_type, resource_date, target_suffix))
+                                os.remove('{0}{1}_{2}{3}.gz.md5'.format(resource_dir, resource_type, resource_date, target_suffix))
+                                log('ERROR', 'Resource download failed')
+                        else:
+                            # rollback
+                            log('WARNING', 'Removing previsously downloaded gz files')
+                            os.remove('{0}{1}_{2}{3}.gz'.format(resource_dir, resource_type, resource_date, target_suffix))
+                            log('ERROR', 'Resource download failed')
+                    else:
+                        log('ERROR', 'Resource download failed')
                     download_semaph = 1
                     # except Exception:
                     #     log('WARNING', 'Unable to download new {0} file {1}{2}_{3}{4}.gz'.format(label, url, resource_type, resource_date, target_suffix))
@@ -157,12 +179,15 @@ def main():
                         help='Optionally updates clingen criteria summary json and generates a txt file containing the list of concerned genes', action='store_true')
     parser.add_argument('-d', '--dbsnp', default='', required=False,
                         help='Optionally updates dbsnp vcf', action='store_true')
+    parser.add_argument('-p', '--download_path', default='', required=True,
+                        help='local path for downloaded files')
     args = parser.parse_args()
 
     clinvar_url = 'https://ftp.ncbi.nlm.nih.gov/pub/clinvar/vcf_GRCh38/'
     dbsnp_url = 'https://ftp.ncbi.nih.gov/snp/latest_release/'
     clingen_criteria_url = 'https://cspec.genome.network/cspec/CriteriaCode/summary'
-    resources_path = '/data/MobiDetails/resources/'
+    # resources_path = '/data/MobiDetails/resources/'
+    resources_path = args.download_path
 
     http = urllib3.PoolManager(cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())
     match_obj = None
@@ -174,10 +199,12 @@ def main():
         current_date = datetime.datetime.today()
         date_string = '{0}{1}{2}'.format(current_date.year, current_date.strftime('%m'), current_date.strftime('%d'))
         clingen_new_file = 'clingenCriteriaSpec_{}'.format(date_string)
-        download_file_from_server_endpoint(
+        download_state = download_file_from_server_endpoint(
             clingen_criteria_url,
             '{0}clingen/{1}.json'.format(resources_path, clingen_new_file)
         )
+        if download_state != 'download ok':
+            log('ERROR', 'Resource download failed')
         # we need to md5 the new file and the current one
         current_md5_value = get_last_md5_file('{}clingen/'.format(resources_path), 'clingenCriteriaSpec', r'clingenCriteriaSpec_(\d+)', '', '')
         BLOCKSIZE = 65536
@@ -222,10 +249,12 @@ def main():
 
     if args.dbsnp:
         # get dbsnp version from https://ftp.ncbi.nih.gov/snp/latest_release/release_notes.txt
-        download_file_from_server_endpoint(
+        download_state = download_file_from_server_endpoint(
             '{}release_notes.txt'.format(dbsnp_url),
             '{}dbsnp/release_notes.txt'.format(resources_path)
         )
+        if download_state != 'download ok':
+            log('ERROR', 'Resource download failed')
         with open('{}dbsnp/release_notes.txt'.format(resources_path), 'r') as f:
             match_obj = re.search(r'dbSNP build (\d+) release notes', f.readline())
             semaph = 0
