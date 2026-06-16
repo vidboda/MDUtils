@@ -188,6 +188,7 @@ def main():
             fill_table(clinvar_last, var, clinsig_last, clinsig2nd_last, clinvar_last_version, clinvar2nd_last_version, 'ncogenic')
             # VUS becomes sthg else
             fill_table(clinvar_last, var, clinsig_last, clinsig2nd_last, clinvar_last_version, clinvar2nd_last_version, 'Uncertain_significance')
+            fill_table(clinvar_last, var, clinsig_last, clinsig2nd_last, clinvar_last_version, clinvar2nd_last_version, 'VUS-')
             # Conflicting_interpretations_of_pathogenicity becomes sthg - replaced w/ Conflicting_classifications_of_pathogenicity 202401278
             # fill_table(clinvar_last, var, clinsig_last, clinsig2nd_last, clinvar_last_version, clinvar2nd_last_version, 'Conflicting_interpretations_of_pathogenicity')
             # Conflicting_classifications_of_pathogenicity becomes sthg
