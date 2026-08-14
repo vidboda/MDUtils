@@ -377,7 +377,7 @@ def main():
                                 else:
                                     insert_dict['ng'] = gene['ng']
                             # gene2ensembl = subprocess.call(['/usr/bin/grep', re.split('.', transcript['reference'])[0], 'gene2ensembl'])
-                            with open('gene2ensembl_hs', 'r') as f:
+                            with open('resources/gene2ensembl_hs', 'r') as f:
                                 for line in f:
                                     line = line.rstrip('\n')
                                     if re.search(re.split(r'\.', transcript['reference'])[0], line):
