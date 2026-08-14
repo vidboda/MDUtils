@@ -13,8 +13,9 @@ from MobiDetailsApp import md_utilities
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Manage UNIPROT data', usage='python get_uniprot_data.py [-f path/to/dir/containing/uniprot/ids.txt]')
+    parser = argparse.ArgumentParser(description='Manage UNIPROT data', usage='python get_uniprot_data.py [-f path/to/dir/containing/uniprot/ids.txt --dry-run]')
     parser.add_argument('-f', '--file', default='', required=False, help='Path to the UNIPROT ID file to be added to MD')
+    parser.add_argument('-d', '--dry-run', default='', required=False, help='Show updates but do not commit to the database', action='store_true')
     args = parser.parse_args()
     # get a file of uniprot id list as input, otherwise queries the whole database
     id_file = None
@@ -62,7 +63,8 @@ def main():
                 """,
                 (id,)
             )
-            db.commit()
+            if not args.dry_run:
+                db.commit()
         uniprot_url = 'https://www.uniprot.org/uniprot/{0}.gff'.format(id)
         # log('DEBUG', 'URL: {0}'.format(uniprot_url))
         if not os.path.isfile(
@@ -139,8 +141,9 @@ def main():
                                 name
                             )
                         )
-                        db.commit()
-    db.close()
+                        if not args.dry_run:
+                            db.commit()
+    db_pool.putconn(db)
 
 
 if __name__ == '__main__':

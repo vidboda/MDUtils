@@ -14,9 +14,11 @@ from MobiDetailsApp import md_utilities
 
 def main():
     parser = argparse.ArgumentParser(description='Update UNIPROT ids and protein size',
-                                     usage='python check_uniprot_ids.py [-k NCBI_API_KEY]')
+                                     usage='python check_uniprot_ids.py [-k NCBI_API_KEY --dry-run]')
     parser.add_argument('-k', '--ncbi-api-key', default=None, required=True,
                         help='NCBI Entrez API key. If not provided, 3rd method is not executed')
+    parser.add_argument('-d', '--dry-run', default='', required=False,
+                        help='Show updates but do not commit to the database', action='store_true')
     args = parser.parse_args()
     ncbi_api_key = None
     if args.ncbi_api_key is not None:
@@ -35,7 +37,7 @@ def main():
         """
         SELECT gene_symbol, refseq, np, uniprot_id, prot_size
         FROM gene
-        WHERE uniprot_id IS NULL
+        WHERE refseq LIKE 'NM_%'
         ORDER BY gene_symbol
         """
     )
@@ -75,7 +77,7 @@ def main():
                             )
                             res_id = curs.fetchone()
                             if not res_id:
-                                # insetr value
+                                # insert value
                                 curs.execute(
                                     """
                                     INSERT INTO uniprot (id)
@@ -83,7 +85,8 @@ def main():
                                     """,
                                     (uniprot_response[0]['accession'],)
                                 )
-                                db.commit()
+                                if not args.dry_run:
+                                    db.commit()
                             curs.execute(
                                 """
                                 UPDATE gene
@@ -91,7 +94,8 @@ def main():
                                 WHERE refseq = '{1}'
                                 """.format(uniprot_response[0]['accession'], gene['refseq'])
                             )
-                            db.commit()
+                            if not args.dry_run:
+                                db.commit()
                             # print("UPDATE gene SET uniprot_id = '{0}' WHERE name[2] = '{1}'".format(uniprot_response[0]['accession'], gene['name'][1]))
                             log('WARNING', 'Updated gene UNIPROT ID of {0} - {1} from {2} to {3}'.format(
                                 gene['gene_symbol'],
@@ -112,31 +116,31 @@ def main():
                 # get prot size from eutils
                 ncbi_url = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=protein&id={0}&rettype=gp&complexity=3&api_key={1}'.format(gene['np'], ncbi_api_key)
                 prot_size = -1
-                # 1st check in MD
-                curs.execute(
-                    """
-                    SELECT prot_size
-                    FROM gene
-                    WHERE np = %s
-                        AND prot_size IS NOT NULL
-                    """,
-                    (gene['np'],)
-                )
-                res_size = curs.fetchone()
-                if res_size:
-                    prot_size = res_size['prot_size']
-                if prot_size == -1:
-                    try:
-                        eutils_response = http.request('GET', ncbi_url).data.decode('utf-8')
-                        # log('DEBUG', eutils_response)
-                        prot_match = re.search(r'Protein\s+1\.\.(\d+)', eutils_response)  # Protein\s+1\.\.(\d+)$
-                        if prot_match:
-                            # log('DEBUG', 'ouhou')
-                            prot_size = int(prot_match.group(1))
-                            # log('DEBUG', prot_size)
-                    except Exception:
-                        log('WARNING', 'no protein size w/ eutils NP acc no {0}, eutils URL:{1}'.format(gene['np'], ncbi_url))
-                    # log('DEBUG', prot_size)
+                # # 1st check in MD - there are errors in md
+                # curs.execute(
+                #     """
+                #     SELECT prot_size
+                #     FROM gene
+                #     WHERE np = %s
+                #         AND prot_size IS NOT NULL
+                #     """,
+                #     (gene['np'],)
+                # )
+                # res_size = curs.fetchone()
+                # if res_size:
+                #     prot_size = res_size['prot_size']
+                # if prot_size == -1:
+                try:
+                    eutils_response = http.request('GET', ncbi_url).data.decode('utf-8')
+                    # log('DEBUG', eutils_response)
+                    prot_match = re.search(r'Protein\s+1\.\.(\d+)', eutils_response)  # Protein\s+1\.\.(\d+)$
+                    if prot_match:
+                        # log('DEBUG', 'ouhou')
+                        prot_size = int(prot_match.group(1))
+                        # log('DEBUG', prot_size)
+                except Exception:
+                    log('WARNING', 'no protein size w/ eutils NP acc no {0}, eutils URL:{1}'.format(gene['np'], ncbi_url))
+                # log('DEBUG', prot_size)
                 if int(prot_size) != -1 and \
                         ((gene['prot_size'] is not None and
                             int(prot_size) != int(gene['prot_size'])) or
@@ -159,8 +163,8 @@ def main():
         else:
             log('WARNING', 'No NP for {}'.format(gene['refseq']))
     log('INFO', '{} isoforms updated'.format(i))
-
-    db.commit()
+    if not args.dry_run:
+        db.commit()
     db_pool.putconn(db)
 
 
