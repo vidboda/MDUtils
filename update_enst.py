@@ -47,6 +47,8 @@ def main():
             i += 1
             if i % 1000 == 0:
                 log('INFO', '{0} transcripts checked'.format(i))
+                if not args.dry_run:
+                    db.commit()
                 # break
             # skip the header
             if line.startswith("transcript_stable_id"):
@@ -83,8 +85,8 @@ def main():
             #     # curs.execute("UPDATE gene set uniprot_id = %s WHERE refseq = %s", (uniprot, result['refseq']))
             #     if result['uniprot_id'] is not None:
             #         log("INFO", f"Inserted UniProt {uniprot} for RefSeq {result['refseq']}")
-        if not args.dry_run:
-            db.commit()
+    if not args.dry_run:
+        db.commit()
     db_pool.putconn(db)
 
 
