@@ -72,6 +72,10 @@ def main():
                 curs.execute("UPDATE gene set enst = %s WHERE refseq = %s", (enst, result['refseq']))
                 # if result['enst'] is not None:
                 log("INFO", f"Inserted ENST {enst} for RefSeq {result['refseq']} old ENST: {result['enst']}")
+            else:
+                if result['enst'] != enst:
+                    curs.execute("UPDATE gene set enst = %s WHERE refseq = %s AND enst = %s", (enst, result['refseq'], result['enst']))
+                    log("INFO", f"RefSeq {refseq} already has ENST {result['enst']} in database, new ENST {enst} inserted")
             # UNIPROT - treated in check_uniprot_ids.py
             # if result["uniprot_id"] != uniprot:
             #     # first check whether the UNIPROT is already in the database
