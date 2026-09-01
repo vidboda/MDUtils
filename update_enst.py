@@ -6,6 +6,9 @@ import argparse
 from precompute_spipv2 import get_db, log
 from MobiDetailsApp import md_utilities
 
+## NOT RELIABLE SEE update_enst_gnomad.py
+## the issue is that in the reference file there may be several ENST for the same NM, then only the last one is retained
+
 
 def main():
     # Updates Eensembl ENST according to https://ftp.ensembl.org/pub/release-116/tsv/homo_sapiens/Homo_sapiens.GRCh38.116.refseq.tsv.gz
@@ -61,34 +64,35 @@ def main():
             uniprot = parts[2] if len(parts) > 2 else None
             # check whether the ENST is already in the database
             curs.execute("SELECT refseq, enst FROM gene WHERE refseq ~ CONCAT(%s, '\.\d{1,2}')", (refseq,))
-            result = curs.fetchone()
+            result = curs.fetchall()
             # ENST
             if not result:
                 # log("WARNING", f"RefSeq {refseq} not found in database")
                 continue
-            if not result['enst']:
-                # here we add only lacking ENSTs, we do not update existing ones
-                # insert the ENST
-                curs.execute("UPDATE gene set enst = %s WHERE refseq = %s", (enst, result['refseq']))
-                # if result['enst'] is not None:
-                log("INFO", f"Inserted ENST {enst} for RefSeq {result['refseq']} old ENST: {result['enst']}")
-            else:
-                if result['enst'] != enst:
-                    curs.execute("UPDATE gene set enst = %s WHERE refseq = %s AND enst = %s", (enst, result['refseq'], result['enst']))
-                    log("INFO", f"RefSeq {refseq} already has ENST {result['enst']} in database, new ENST {enst} inserted")
-            # UNIPROT - treated in check_uniprot_ids.py
-            # if result["uniprot_id"] != uniprot:
-            #     # first check whether the UNIPROT is already in the database
-            #     curs.execute("SELECT id FROM uniprot WHERE id = %s", (uniprot,))
-            #     uniprot_result = curs.fetchone()
-            #     if uniprot_result is None:
-            #         # insert the UNIPROT
-            #         # curs.execute("INSERT INTO uniprot (id) VALUES (%s)", (uniprot,))
-            #         log("WARNING", f"UniProt ID to be inserted {uniprot}")
-            #     # insert the UNIPROT
-            #     # curs.execute("UPDATE gene set uniprot_id = %s WHERE refseq = %s", (uniprot, result['refseq']))
-            #     if result['uniprot_id'] is not None:
-            #         log("INFO", f"Inserted UniProt {uniprot} for RefSeq {result['refseq']}")
+            for res in result:
+                if not res['enst']:
+                    # here we add only lacking ENSTs, we do not update existing ones
+                    # insert the ENST
+                    curs.execute("UPDATE gene set enst = %s WHERE refseq = %s", (enst, res['refseq']))
+                    # if res['enst'] is not None:
+                    log("INFO", f"Inserted ENST {enst} for RefSeq {res['refseq']} old ENST: {res['enst']}")
+                else:
+                    if res['enst'] != enst:
+                        curs.execute("UPDATE gene set enst = %s WHERE refseq = %s AND enst = %s", (enst, res['refseq'], res['enst']))
+                        log("INFO", f"RefSeq {refseq} already has ENST {res['enst']} in database, new ENST {enst} inserted")
+                # UNIPROT - treated in check_uniprot_ids.py
+                # if res["uniprot_id"] != uniprot:
+                #     # first check whether the UNIPROT is already in the database
+                #     curs.execute("SELECT id FROM uniprot WHERE id = %s", (uniprot,))
+                #     uniprot_res = curs.fetchone()
+                #     if uniprot_res is None:
+                #         # insert the UNIPROT
+                #         # curs.execute("INSERT INTO uniprot (id) VALUES (%s)", (uniprot,))
+                #         log("WARNING", f"UniProt ID to be inserted {uniprot}")
+                #     # insert the UNIPROT
+                #     # curs.execute("UPDATE gene set uniprot_id = %s WHERE refseq = %s", (uniprot, res['refseq']))
+                #     if res['uniprot_id'] is not None:
+                #         log("INFO", f"Inserted UniProt {uniprot} for RefSeq {res['refseq']}")
     if not args.dry_run:
         db.commit()
     db_pool.putconn(db)
