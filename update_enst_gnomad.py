@@ -154,8 +154,8 @@ def main():
                 # while the newly chosen ENST is not or less annotated.
                 # Switching would lose gnomAD annotation coverage.
                 old_is_active = gnomad_counts.get(old_enst, 0) >= args.min_gnomad_count
-                new_is_active = gnomad_counts.get(chosen, 0) >= gnomad_counts.get(old_enst, 0)
-                # new_is_active = gnomad_counts.get(chosen, 0) >= args.min_gnomad_count
+                # new_is_active = gnomad_counts.get(chosen, 0) >= gnomad_counts.get(old_enst, 0)
+                new_is_active = gnomad_counts.get(chosen, 0) >= args.min_gnomad_count
 
                 if old_is_active and not new_is_active:
                     n_kept += 1
@@ -170,7 +170,7 @@ def main():
                         'reason': 'old ENST is gnomAD-annotated (>=threshold), new ENST is not',
                     })
                     log('INFO', f"{res['refseq']}: kept ENST {old_enst} "
-                                f"(gnomAD-annotated, {gnomad_counts.get(old_enst, 0)} >= {args.min_gnomad_count}), "
+                                f"(gnomAD-annotated, {gnomad_counts.get(old_enst, 0)} >= {gnomad_counts.get(chosen, 0)}), "
                                 f"not switching to {chosen} ({gnomad_counts.get(chosen, 0)})")
                     continue
 
