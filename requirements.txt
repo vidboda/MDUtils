@@ -9,7 +9,7 @@ Cython==0.29.13
 idna==3.15
 libarchive-c==2.8
 maxentpy==0.0.1
-msgpack==1.2.1
+msgpack==1.2.3
 pycosat==0.6.3
 pycparser==2.19
 pyOpenSSL==26.0.0
